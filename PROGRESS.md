@@ -1121,3 +1121,30 @@ P3.9 的实现是「条目只存 type，徽标实时读 settings.logCustom」，
 - ✅ 2/16 春节第1天、2/17 第2天；5/5 劳动节第5天；9/25 中秋第1天
 - ✅ 四个最长标题均未被省略号截断（scrollWidth ≤ clientWidth）
 - ✅ 回到今天后恢复无假期；24 节点、底栏不溢出
+
+---
+
+## P3.15 · 浅色模式 ✅ 2026-11-16（待验收）
+
+### 功能
+
+- 设置页「外观」三选一：跟随系统 / 深色 / 浅色；`settings.theme` 存 `auto / dark / light`，默认 `auto`。`normalize()` 只认这三个值，缺省或非法值一律回 `auto`。
+- 生效方式：`document.documentElement` 的 `data-theme` + CSS `:root[data-theme="light"]` 重设语义变量；`applyTheme()` 同时同步 `<meta name="theme-color">`（深 `#0e131f` / 浅 `#f5f8fc`）。
+- `auto` 监听 `matchMedia('(prefers-color-scheme: light)')` 的 change，系统外观变化即时生效；手动选深/浅后忽略系统变化。
+- 首屏防闪：`index.html` 头部内联小脚本先读 `timerail.v2` 的 `settings.theme` 落 `data-theme`，app.js 启动后再按 normalize 结果校正一次。
+- 样式层新增语义变量（`--chip-*`、`--scrim`、`--shadow-lg`、`--warn-*`、`--blue-*`、`--green-*`、`--orange-*`、`--amber-*`、`--node-*`、`--hint-*` 等），把轨道、节点、时间标签、事项 chip、次日分隔、现在线、底栏、时段面板、顺延池、小记、设置、日历、引导、存储告警条的硬编码色替换为变量；浅色主题只覆盖变量，不逐条改组件。
+- 浅色下原生日期/时间控件（模板起点、轮换起始日）使用 `color-scheme: light`。
+- 已知差异：`manifest.webmanifest` 的 `theme_color / background_color` 是静态深色，不随主题切换；启动画面仍为深色，已记入 HANDOFF。
+
+### 版本
+
+`?v=p3.15`、SW `timerail-p3.15`、设置页 P3.15 (2026-11-16)。
+
+### 验收（37 项自动化全绿 × 2 轮：系统深 / 系统浅）
+
+- ✅ 默认 auto 跟随系统（`matchMedia` 深、浅两种环境各跑一遍）
+- ✅ 默认值 `theme=auto` 入库；手动深色/浅色切换、按钮高亮、`theme-color` 同步
+- ✅ 浅色刷新后保持；非法值 `neon` 刷新后回 auto 且高亮跟随系统，之后仍可再切深色
+- ✅ 浅色 24 节点、轨道与底栏无横向溢出；四风格 × 纵/横共 8 组节点数不变
+- ✅ 浅色日历（42 格 / 选中 / 开关）、小记面板开关、进阶区展开收起、存储告警条配色
+- ✅ 浅色底与语义变量实际生效（`#f5f8fc` / `--chip-line: #d7e0ec`）

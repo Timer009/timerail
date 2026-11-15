@@ -10,10 +10,27 @@
 <meta name="application-name" content="微记">
 <meta name="apple-mobile-web-app-title" content="微记">
 <title>微记</title>
-<link rel="manifest" href="manifest.webmanifest?v=p3.14">
+<script>
+/* 首屏先定主题，避免浅色模式启动时闪一下深色；app.js 启动后会按设置再校正 */
+(function () {
+  var t = 'auto';
+  try {
+    var raw = localStorage.getItem('timerail.v2');
+    if (raw) {
+      var d = JSON.parse(raw);
+      if (d && d.settings && (d.settings.theme === 'light' || d.settings.theme === 'dark')) t = d.settings.theme;
+    }
+  } catch (e) {}
+  var light = t === 'light' || (t === 'auto' && window.matchMedia && window.matchMedia('(prefers-color-scheme: light)').matches);
+  document.documentElement.setAttribute('data-theme', light ? 'light' : 'dark');
+  var m = document.querySelector('meta[name="theme-color"]');
+  if (m) m.setAttribute('content', light ? '#f5f8fc' : '#0e131f');
+})();
+</script>
+<link rel="manifest" href="manifest.webmanifest?v=p3.15">
 <link rel="icon" type="image/png" sizes="192x192" href="icon-192.png">
 <link rel="apple-touch-icon" href="apple-touch-icon.png">
-<link rel="stylesheet" href="styles.css?v=p3.14">
+<link rel="stylesheet" href="styles.css?v=p3.15">
 </head>
 <body>
 
@@ -192,6 +209,16 @@
     </div>
 
     <div class="field">
+      <label>外观</label>
+      <div class="seg wide" id="themeseg">
+        <button type="button" data-th="auto">跟随系统</button>
+        <button type="button" data-th="dark">深色</button>
+        <button type="button" data-th="light">浅色</button>
+      </div>
+      <div class="field-hint">跟随系统会随手机的深浅色设置自动切换</div>
+    </div>
+
+    <div class="field">
       <button type="button" class="adv-toggle" id="adv-toggle" aria-expanded="false" aria-controls="adv-body">
         <span class="adv-name">进阶 · 多套日程与轮换</span>
         <span class="adv-sum" id="adv-sum">已存 0 套日程 · 未启用轮换</span>
@@ -254,7 +281,7 @@
       <button type="button" class="ghost danger" id="reset">清空全部数据</button>
     </div>
 
-    <div class="note">数据仅保存在本设备浏览器中 · 版本 P3.14 (2026-11-16)</div>
+    <div class="note">数据仅保存在本设备浏览器中 · 版本 P3.15 (2026-11-16)</div>
   </div>
 </section>
 
@@ -276,6 +303,6 @@
 </div>
 
 <div id="toast"></div>
-<script src="app.js?v=p3.14"></script>
+<script src="app.js?v=p3.15"></script>
 </body>
 </html>

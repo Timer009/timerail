@@ -2,7 +2,7 @@
 
 > 本文档是"方案文档 v0.1"之后的决策快照。v0.1 里被推翻的部分以本文为准。
 > 原型代码：本目录（index.html / styles.css / app.js / _qa.html），零构建，无依赖。
-> 更新日期：2026-11-12
+> 更新日期：2026-11-16
 
 ---
 
@@ -139,3 +139,15 @@ timerail/
 - 上线后**用手机 4G（非 WiFi）验证一次**。
 - 链接必须保活到 12/6（评审期）。
 - 评委大概率用电脑打开：桌面浏览器布局已验证（480px 居中列），保持。
+
+## 七、主题规则（P3.15 起）
+
+- `settings.theme` 只存 `auto / dark / light`，默认 `auto`；`normalize()` 对缺省和非法值一律回 `auto`，旧备份不带此字段也能正常载入。
+- 生效链路：`document.documentElement.dataset.theme` → CSS `:root[data-theme="light"]` 覆盖语义变量；`applyTheme()` 同时更新 `<meta name="theme-color">`（深 `#0e131f` / 浅 `#f5f8fc`）。
+- **新增颜色不要写死**：先在 `:root` 加语义变量（参考 `--chip-line / --chip-bg / --chip-text / --scrim / --shadow-lg / --warn-* / --blue-* / --green-* / --orange-* / --amber-* / --node-* / --hint-*`），组件只引用变量，再在 `:root[data-theme="light"]` 里给值。否则浅色下必然漏改。
+- `auto` 用 `matchMedia('(prefers-color-scheme: light)')` 监听系统变化；监听器要兼容 `addEventListener` 与旧版 `addListener`。
+- 首屏防闪：`index.html` `<head>` 里的内联小脚本先读 `timerail.v2` 定 `data-theme`，`app.js` 启动后以 `normalize()` 结果为准再校正一次。改主题字段名时必须同步这两处。
+- **已知差异**：`manifest.webmanifest` 的 `theme_color / background_color` 是静态深色值，不随主题切换。PWA 启动画面/安装卡片仍显示深色底；不为此新建 manifest。
+- 浅色验收必须在 390×844 下逐屏看：四种轨道 × 纵横、节点五态与呼吸圈、时间标签、chip、次日分隔与现在线、底栏、时段面板、顺延池、小记与自定义弹窗、设置全部区块、日历（今天/选中/绿点）、引导、存储失败告警条。
+- 浅色下原生日期/时间控件需要 `color-scheme: light`（已对 `.tpl-line` 与 `.rot-anchor` 覆盖）。
+- 版本三处同步照旧：`index.html` 的 `?v=`（manifest / css / js）、`sw.js` 的 CACHE 与 ASSETS、设置页版本注记。

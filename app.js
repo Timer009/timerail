@@ -85,7 +85,7 @@ var fakeNow = null;   // 调试用：把"现在"钉在某个时刻，便于截�
 function defaultData() {
   return {
     version: 2,
-    settings: { granularity: 60, dayStart: 0, shiftName: '常规日', onboarded: false, trackStyle: 'wave', orientation: 'v', logCustom: null, lastExportAt: '' },
+    settings: { granularity: 60, dayStart: 0, shiftName: '常规日', onboarded: false, trackStyle: 'wave', orientation: 'v', logCustom: null, lastExportAt: '', theme: 'auto' },
     shifts: {},                                             // P3：班次模板
     rotation: { cycle: [], anchorDate: '', active: false }, // P3：轮转规则
     days: {},
@@ -181,8 +181,11 @@ function normalize(d) {
     trackStyle: snapStyle(s.trackStyle),
     orientation: snapOrient(s.orientation),
     logCustom: null,
-    lastExportAt: ''
+    lastExportAt: '',
+    theme: 'auto'
   };
+  // P3.15 主题：只认 auto / dark / light，非法值一律回到跟随系统
+  if (s.theme === 'dark' || s.theme === 'light') d.settings.theme = s.theme;
   // 备份提醒用的上次导出时间：必须是能被 Date 解析的字符串
   if (typeof s.lastExportAt === 'string' && !isNaN(new Date(s.lastExportAt).getTime())) {
     d.settings.lastExportAt = s.lastExportAt;
@@ -899,6 +902,44 @@ function updateAdvSum() {
   advSum.textContent = '已存 ' + n + ' 套日程 · ' + (rotationOn() ? '轮换已启用' : '未启用轮换');
 }
 
+/* ===== 主题（P3.15）=====
+ * 设置只存 auto / dark / light；实际生效值写到 documentElement 的 data-theme，
+ * CSS 在 :root[data-theme="light"] 里统一重设语义变量。 */
+var THEME_META = { dark: '#0e131f', light: '#f5f8fc' };
+function systemPrefersLight() {
+  try {
+    return !!(window.matchMedia && window.matchMedia('(prefers-color-scheme: light)').matches);
+  } catch (e) { return false; }
+}
+function resolveTheme() {
+  var t = cfg().theme;
+  if (t === 'dark' || t === 'light') return t;
+  return systemPrefersLight() ? 'light' : 'dark';
+}
+function applyTheme() {
+  var t = resolveTheme();
+  document.documentElement.setAttribute('data-theme', t);
+  var m = document.querySelector('meta[name="theme-color"]');
+  if (m) m.setAttribute('content', THEME_META[t]);
+  syncThemeUI();
+}
+function syncThemeUI() {
+  var cur = cfg().theme;
+  if (cur !== 'dark' && cur !== 'light') cur = 'auto';
+  Array.prototype.forEach.call(document.querySelectorAll('#themeseg button'), function (b) {
+    b.classList.toggle('active', b.getAttribute('data-th') === cur);
+  });
+}
+/* auto 时系统外观变化即时生效；手动选深/浅色时忽略系统变化 */
+(function watchSystemTheme() {
+  var mq = null;
+  try { mq = window.matchMedia && window.matchMedia('(prefers-color-scheme: light)'); } catch (e) {}
+  if (!mq) return;
+  var onChange = function () { if (cfg().theme === 'auto') applyTheme(); };
+  if (mq.addEventListener) mq.addEventListener('change', onChange);
+  else if (mq.addListener) mq.addListener(onChange);
+})();
+
 function updateHeader() {
   var d = view.date;
   var week = ['周日', '周一', '周二', '周三', '周四', '周五', '周六'][d.getDay()];
@@ -1609,6 +1650,7 @@ function renderSettings() {
     : '启用后从起始日期起，按周期逐天套用日程模板';
   renderBackupWarn();
   updateAdvSum();
+  syncThemeUI();
 }
 
 /* 备份提醒：有数据且从未导出 / 距上次导出超过 7 天时，在设置页数据区亮一条温和提示 */
@@ -1776,6 +1818,7 @@ importFile.addEventListener('change', function () {
       '覆盖导入', function () {
         data = next;
         saveData();
+        applyTheme();
         hideSheet();
         view.date = shiftDateOf(new Date());
         view.block = 0;
@@ -1959,6 +2002,18 @@ advToggle.addEventListener('click', function () {
   advToggle.classList.toggle('open', open);
 });
 
+document.getElementById('themeseg').addEventListener('click', function (e) {
+  var b = e.target.closest('button');
+  if (!b) return;
+  var t = b.getAttribute('data-th');
+  if (t !== 'auto' && t !== 'dark' && t !== 'light') return;
+  if (cfg().theme === t) return;
+  cfg().theme = t;
+  saveData();
+  applyTheme();
+  haptic();
+});
+
 shiftInput.addEventListener('input', function () {
   if (rotationOn()) return;
   cfg().shiftName = shiftInput.value.trim();
@@ -1971,6 +2026,7 @@ document.getElementById('reset').addEventListener('click', function () {
   confirmBox('清空全部数据', '将删除所有日期的事项、日程模板与全部设置，且不可恢复。', '全部清空', function () {
     data = defaultData();
     saveData();
+    applyTheme();
     view.date = shiftDateOf(new Date());
     hideSheet();
     render();
@@ -2132,6 +2188,7 @@ var isDemo = false, forceOnboard = false;
 
 /* ===== 启动 ===== */
 probeStorage();
+applyTheme();          // 先按设置落主题，再渲染轨道
 view.date = shiftDateOf(new Date());
 render();
 scrollToNow(false);   // 先同步定位一次，rAF 在后台标签/离屏 iframe 里可能被节流
