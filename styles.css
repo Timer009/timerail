@@ -40,8 +40,9 @@ input { font: inherit; color: inherit; }
   justify-content: space-between;
   padding: calc(8px + env(safe-area-inset-top)) 8px 8px;
   border-bottom: 1px solid var(--line-soft);
-  background: rgba(14, 19, 31, .92);
-  backdrop-filter: blur(10px);
+  /* 顶栏改为不透明纯色：iOS 上 backdrop-filter 会把整条顶栏（含日期文字）
+     栅格化成低分辨率图层，放大回原尺寸就发虚，去掉即清晰 */
+  background: var(--bg);
   z-index: 20;
 }
 .titlewrap {

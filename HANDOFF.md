@@ -52,6 +52,7 @@ timerail/
 - 图标（P3.8）：深底 `#0e131f` + 白色「微记」字标 + 轨道折线；`icon-192/512`、`apple-touch-icon`(180)、`icon-maskable-512` 同一母版，maskable 内容缩到 70% 安全区；字标字体自 P3.10.1 起为华文楷体（带轻微描边），生成脚本不入库
 - 小记（P3.9）：条目 `type` 为 `highlight / review / custom`；自定义只有一套，名称与表情存在 `settings.logCustom`（名称 ≤4 字、表情限白名单）；不要做「删除类型」
 - 备份提醒（P3.12）：`settings.lastExportAt` 由导出动作写入，normalize 校验；`renderBackupWarn()` 在 renderSettings 末尾调用，有数据且 ≥7 天（或从未导出）才亮，7 天内或无数据必须隐藏
+- iOS 发虚（P3.13.1）：顶栏禁用 `backdrop-filter`，用不透明 `var(--bg)`；iOS 上 backdrop-filter 会把含文字的条带栅格化并在缩放时拉伸，导致文字发虚，新增带文字条带一律不要用 backdrop-filter
 - 日历选天（P3.13）：`#date-label` 点击 `openCal()`；`renderCal()` 42 格固定，dim=非本月、today=shiftDateOf 口径、sel=view.date、has=有事项或小记；跳转后 `render()+closeCal()+scrollToNow(true)`。`.titlewrap` 仍为 pointer-events:none，仅 `#date-label` 放开
 - 节日表（P3.12）：`HOL` 为 2026–2028 固定日期表，只追加显示不改数据；农历节日需逐年录入，2029 后要续表
 - 小记快照（P3.9.1）：`custom` 条目入库时写 `emoji / label` 定格当时的图标与名字，改类型只影响新条目；normalize 校验这两字段，缺失时退回当前配置
