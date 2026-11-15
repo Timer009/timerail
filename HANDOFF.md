@@ -54,7 +54,7 @@ timerail/
 - 备份提醒（P3.12）：`settings.lastExportAt` 由导出动作写入，normalize 校验；`renderBackupWarn()` 在 renderSettings 末尾调用，有数据且 ≥7 天（或从未导出）才亮，7 天内或无数据必须隐藏
 - iOS 发虚（P3.13.1）：顶栏禁用 `backdrop-filter`，用不透明 `var(--bg)`；iOS 上 backdrop-filter 会把含文字的条带栅格化并在缩放时拉伸，导致文字发虚，新增带文字条带一律不要用 backdrop-filter
 - 日历选天（P3.13）：`#date-label` 点击 `openCal()`；`renderCal()` 42 格固定，dim=非本月、today=shiftDateOf 口径、sel=view.date、has=有事项或小记；跳转后 `render()+closeCal()+scrollToNow(true)`。`.titlewrap` 仍为 pointer-events:none，仅 `#date-label` 放开
-- 节日表（P3.12）：`HOL` 为 2026–2028 固定日期表，只追加显示不改数据；农历节日需逐年录入，2029 后要续表
+- 节日区间（P3.14）：`HOL_RANGES` = [名称, 起始日, 天数]，启动展开成 `HOLMAP`（{name,idx,total}）；顶栏显示「国庆假期 第3天」。区间为通常放假长度（元旦3/春节7/清明3/劳动5/端午3/中秋3/国庆7），**不含调休补班**；重叠时先声明先赢（2028 中秋在国庆内）。农历节日逐年录入，2029 起续表
 - 小记快照（P3.9.1）：`custom` 条目入库时写 `emoji / label` 定格当时的图标与名字，改类型只影响新条目；normalize 校验这两字段，缺失时退回当前配置
 - 小记删除（P3.11 定稿）：每行常驻 32×32 ✕，点击弹确认框后按 id 删除；**不再做滑动手势**（P3.10–P3.10.3 已整体回退），行结构保持 `.log-row` = 徽标 + 正文 + ✕，不要再加 `.log-slide` 或 `swiped` 状态
 - 底栏（P3.8.2）：「小记 N」是 13px 胶囊，位于粒度切换同一排；「回到现在」是 12px 文字按钮，不要再放大回 ghost 主按钮
