@@ -10,10 +10,10 @@
 <meta name="application-name" content="微记">
 <meta name="apple-mobile-web-app-title" content="微记">
 <title>微记</title>
-<link rel="manifest" href="manifest.webmanifest?v=p3.11">
+<link rel="manifest" href="manifest.webmanifest?v=p3.12">
 <link rel="icon" type="image/png" sizes="192x192" href="icon-192.png">
 <link rel="apple-touch-icon" href="apple-touch-icon.png">
-<link rel="stylesheet" href="styles.css?v=p3.11">
+<link rel="stylesheet" href="styles.css?v=p3.12">
 </head>
 <body>
 
@@ -233,11 +233,12 @@
         <button type="button" class="ghost" id="import">导入备份</button>
         <input type="file" id="import-file" accept=".json,application/json" hidden>
       </div>
+      <div class="backup-warn" id="backup-warn" hidden></div>
       <div class="field-hint">备份包含所有日期、事项、顺延池、日程模板、轮换与小记；导入会覆盖本机数据，建议先导出。</div>
       <button type="button" class="ghost danger" id="reset">清空全部数据</button>
     </div>
 
-    <div class="note">数据仅保存在本设备浏览器中 · 版本 P3.11 (2026-11-15)</div>
+    <div class="note">数据仅保存在本设备浏览器中 · 版本 P3.12 (2026-11-15)</div>
   </div>
 </section>
 
@@ -259,6 +260,6 @@
 </div>
 
 <div id="toast"></div>
-<script src="app.js?v=p3.11"></script>
+<script src="app.js?v=p3.12"></script>
 </body>
 </html>

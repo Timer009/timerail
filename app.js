@@ -1,4 +1,4 @@
-/* 微记 · 正式版 P3.11
+/* 微记 · 正式版 P3.12
  * 渲染管线沿用已验证的原型 v0.2（见 _proto/ 快照），在其上完成 P1/P2：
  *   - 数据层重构为 HANDOFF §三 的 v2 模型（version / granularity / duration /
  *     pool + shifts + rotation 占位），遵守五条不变量：
@@ -39,6 +39,7 @@
  *   - P3.10.2：图标回退为黑体；删除按钮显隐修正
  *   - P3.10.3：左滑手势改用 touch 事件 + 延迟定向
  *   - P3.11：删除回归唯一入口 —— 每行常驻 ✕，点开确认框；去掉全部滑动手势与相关样式
+ *   - P3.12：备份提醒（有数据且 7 天未导出时设置页提示）+ 顶栏日期后追加节日名（2026–2028 固定表）
  */
 (function () {
 'use strict';
@@ -81,7 +82,7 @@ var fakeNow = null;   // 调试用：把"现在"钉在某个时刻，便于截�
 function defaultData() {
   return {
     version: 2,
-    settings: { granularity: 60, dayStart: 0, shiftName: '常规日', onboarded: false, trackStyle: 'wave', orientation: 'v', logCustom: null },
+    settings: { granularity: 60, dayStart: 0, shiftName: '常规日', onboarded: false, trackStyle: 'wave', orientation: 'v', logCustom: null, lastExportAt: '' },
     shifts: {},                                             // P3：班次模板
     rotation: { cycle: [], anchorDate: '', active: false }, // P3：轮转规则
     days: {},
@@ -91,6 +92,17 @@ function defaultData() {
 }
 function snapG(v) { v = +v; return (v === 30 || v === 60 || v === 120) ? v : 60; }
 var LOG_EMOJIS = ['✨', '🌱', '📝', '💡', '🎯', '🧩'];
+
+/* 节日表（2026–2028 固定日期；春节/元宵/端午/中秋等农历节日逐年录入）。
+ * 命中时在顶栏日期后追加「· 节名」，过期或未收录的日期不受影响。 */
+var HOL = {
+  '2026-01-01': '元旦', '2026-02-16': '除夕', '2026-02-17': '春节', '2026-03-03': '元宵',
+  '2026-04-05': '清明', '2026-05-01': '劳动节', '2026-06-19': '端午', '2026-09-25': '中秋', '2026-10-01': '国庆',
+  '2027-01-01': '元旦', '2027-02-05': '除夕', '2027-02-06': '春节', '2027-02-20': '元宵',
+  '2027-04-05': '清明', '2027-05-01': '劳动节', '2027-06-09': '端午', '2027-09-15': '中秋', '2027-10-01': '国庆',
+  '2028-01-01': '元旦', '2028-01-25': '除夕', '2028-01-26': '春节', '2028-02-09': '元宵',
+  '2028-04-04': '清明', '2028-05-01': '劳动节', '2028-05-28': '端午', '2028-10-03': '中秋', '2028-10-01': '国庆'
+};
 function snapStart(v) { v = +v; return (v >= 0 && v < 1440) ? v : 0; }
 function snapStatus(v) { return ['todo', 'doing', 'done', 'missed', 'canceled'].indexOf(v) >= 0 ? v : 'todo'; }
 
@@ -150,8 +162,13 @@ function normalize(d) {
     onboarded: !!s.onboarded,
     trackStyle: snapStyle(s.trackStyle),
     orientation: snapOrient(s.orientation),
-    logCustom: null
+    logCustom: null,
+    lastExportAt: ''
   };
+  // 备份提醒用的上次导出时间：必须是能被 Date 解析的字符串
+  if (typeof s.lastExportAt === 'string' && !isNaN(new Date(s.lastExportAt).getTime())) {
+    d.settings.lastExportAt = s.lastExportAt;
+  }
   // 自定义小记类型：最多 4 字，表情必须在白名单里；没有名称视为未启用
   var lc = s.logCustom;
   if (lc && typeof lc === 'object') {
@@ -869,8 +886,9 @@ function updateHeader() {
   var week = ['周日', '周一', '周二', '周三', '周四', '周五', '周六'][d.getDay()];
   var dayDiff = Math.round((d.getTime() - shiftDateOf(new Date()).getTime()) / 86400000);
   var rel = dayDiff === 0 ? '今天 · ' : dayDiff === -1 ? '昨天 · ' : dayDiff === 1 ? '明天 · ' : '';
+  var hol = HOL[ymd(d)];
   document.getElementById('date-label').textContent =
-    rel + (d.getMonth() + 1) + '月' + d.getDate() + '日 ' + week;
+    rel + (d.getMonth() + 1) + '月' + d.getDate() + '日 ' + week + (hol ? ' · ' + hol : '');
 
   var rot = rotationOn();
   var sub = (rot ? '轮换 · ' : '') + shiftOf(viewKey()).name;
@@ -1570,7 +1588,26 @@ function renderSettings() {
   rotHint.textContent = on
     ? '轮换已启用：每天按周期套用日程模板，「一天的起点」随日期变化'
     : '启用后从起始日期起，按周期逐天套用日程模板';
+  renderBackupWarn();
   updateAdvSum();
+}
+
+/* 备份提醒：有数据且从未导出 / 距上次导出超过 7 天时，在设置页数据区亮一条温和提示 */
+function renderBackupWarn() {
+  var warn = document.getElementById('backup-warn');
+  if (!warn) return;
+  var c = backupCounts(data);
+  var hasData = c.days > 0 || c.items > 0 || c.logs > 0 || c.pool > 0;
+  var days = -1;
+  if (cfg().lastExportAt) {
+    var t = new Date(cfg().lastExportAt);
+    if (!isNaN(t.getTime())) days = Math.floor((Date.now() - t.getTime()) / 86400000);
+  }
+  if (!hasData || (days >= 0 && days < 7)) { warn.hidden = true; return; }
+  warn.hidden = false;
+  warn.textContent = days < 0
+    ? '已有记录但还没导出过备份，建议先导出一份留底'
+    : '已 ' + days + ' 天未导出备份，建议再导出一份';
 }
 
 /* 轮转改动后：守住合法性，回到今天，重绘轨道与设置 */
@@ -1683,6 +1720,8 @@ function parseBackup(text) {
 }
 
 document.getElementById('export').addEventListener('click', function () {
+  data.settings.lastExportAt = iso();   // 导出即备份：记录时间，供设置页提醒
+  saveData();
   var text = JSON.stringify({ app: 'timerail', kind: 'backup', exportedAt: iso(), data: data }, null, 2);
   var blob = new Blob([text], { type: 'application/json' });
   var url = URL.createObjectURL(blob);
@@ -1695,6 +1734,7 @@ document.getElementById('export').addEventListener('click', function () {
   setTimeout(function () { URL.revokeObjectURL(url); }, 1000);
   toast('已导出备份');
   haptic();
+  renderBackupWarn();
 });
 
 document.getElementById('import').addEventListener('click', function () {
