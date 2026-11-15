@@ -378,7 +378,7 @@ body.horiz .hint {
   z-index: 20;
 }
 .stats {
-  display: flex; justify-content: space-between;
+  display: flex; align-items: center; gap: 16px;
   font-size: 11px; color: var(--muted);
   padding: 0 2px 7px;
   font-variant-numeric: tabular-nums;
@@ -391,14 +391,20 @@ body.horiz .hint {
   text-underline-offset: 3px;
 }
 .pool-link[hidden] { display: none; }
-.linkwrap { display: flex; align-items: center; gap: 10px; }
+.linkwrap { display: flex; align-items: center; gap: 10px; margin-left: auto; }
 .log-link {
-  font-size: 11px;
-  color: #8fb2ff;
-  padding: 0;
-  text-decoration: underline;
-  text-underline-offset: 3px;
+  display: inline-flex; align-items: center;
+  height: 32px; padding: 0 12px;
+  border-radius: 999px;
+  font-size: 13px;
+  color: #cfe0ff;
+  background: rgba(76, 141, 255, .12);
+  border: 1px solid rgba(76, 141, 255, .25);
+  font-variant-numeric: tabular-nums;
 }
+.log-link:active { background: rgba(76, 141, 255, .2); }
+.bar-right { display: flex; align-items: center; gap: 10px; }
+#go-now { font-size: 12px; padding: 5px 8px; }
 .bar { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
 .seg {
   display: flex;

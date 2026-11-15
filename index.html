@@ -10,10 +10,10 @@
 <meta name="application-name" content="微记">
 <meta name="apple-mobile-web-app-title" content="微记">
 <title>微记</title>
-<link rel="manifest" href="manifest.webmanifest?v=p3.8.1">
+<link rel="manifest" href="manifest.webmanifest?v=p3.8.2">
 <link rel="icon" type="image/png" sizes="192x192" href="icon-192.png">
 <link rel="apple-touch-icon" href="apple-touch-icon.png">
-<link rel="stylesheet" href="styles.css?v=p3.8.1">
+<link rel="stylesheet" href="styles.css?v=p3.8.2">
 </head>
 <body>
 
@@ -48,7 +48,6 @@
     <span id="stat-plan">已规划 0h</span>
     <span class="linkwrap">
       <button type="button" class="pool-link" id="pool-link" hidden>顺延池 0</button>
-      <button type="button" class="log-link" id="log-link">小记</button>
     </span>
   </div>
   <div class="bar">
@@ -57,7 +56,10 @@
       <button type="button" data-g="60">1时</button>
       <button type="button" data-g="120">2时</button>
     </div>
-    <button type="button" class="ghost" id="go-now">回到现在</button>
+    <div class="bar-right">
+      <button type="button" class="log-link" id="log-link">小记</button>
+      <button type="button" class="ghost" id="go-now">回到现在</button>
+    </div>
   </div>
 </footer>
 
@@ -221,7 +223,7 @@
       <button type="button" class="ghost danger" id="reset">清空全部数据</button>
     </div>
 
-    <div class="note">数据仅保存在本设备浏览器中 · 版本 P3.8.1 (2026-11-15)</div>
+    <div class="note">数据仅保存在本设备浏览器中 · 版本 P3.8.2 (2026-11-15)</div>
   </div>
 </section>
 
@@ -243,6 +245,6 @@
 </div>
 
 <div id="toast"></div>
-<script src="app.js?v=p3.8.1"></script>
+<script src="app.js?v=p3.8.2"></script>
 </body>
 </html>

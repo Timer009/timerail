@@ -1,4 +1,4 @@
-/* 微记 · 正式版 P3.8.1
+/* 微记 · 正式版 P3.8.2
  * 渲染管线沿用已验证的原型 v0.2（见 _proto/ 快照），在其上完成 P1/P2：
  *   - 数据层重构为 HANDOFF §三 的 v2 模型（version / granularity / duration /
  *     pool + shifts + rotation 占位），遵守五条不变量：
@@ -31,6 +31,7 @@
  *           图标换成深底「微记」字标 + 轨道折线
  *   - P3.8.1：安装入口常驻 —— 不再依赖 beforeinstallprompt；已装显示「已安装」，
  *           拿不到 prompt 时给浏览器菜单引导；manifest 加版本查询串强制刷新
+ *   - P3.8.2：底栏重排 —— 「小记 N」升为 13px 胶囊并移到粒度切换同排，「回到现在」缩为 12px
  */
 (function () {
 'use strict';
