@@ -1,4 +1,4 @@
-/* 微记 · 正式版 P3.10.2
+/* 微记 · 正式版 P3.10.3
  * 渲染管线沿用已验证的原型 v0.2（见 _proto/ 快照），在其上完成 P1/P2：
  *   - 数据层重构为 HANDOFF §三 的 v2 模型（version / granularity / duration /
  *     pool + shifts + rotation 占位），遵守五条不变量：
@@ -35,7 +35,9 @@
  *   - P3.9：小记第三个分类「＋ 自定义」—— 单类型，4 字名 + 表情，点已选胶囊改名
  *   - P3.9.1：自定义小记的图标/名字记录时定格 —— 改类型只影响新条目，旧条目不回头改写
  *   - P3.10：小记左滑删除 —— 行内容左移露出「删除」，纵向滚动不拦截，一次只展开一行
- *   - P3.10.1：图标字标试换楷体（已被 P3.10.2 回退）\n *   - P3.10.2：图标回退为黑体；左滑删除的「删除」改为默认 opacity 0 + 不吃点击，只在左滑时出现
+ *   - P3.10.1：图标字标试换楷体（已被 P3.10.2 回退）
+ *   - P3.10.2：图标回退为黑体；左滑删除的「删除」改为默认 opacity 0 + 不吃点击，只在左滑时出现
+ *   - P3.10.3：左滑手势重做 —— 改用 touch 事件 + 延迟定方向，修掉安卓上抢不到手势的问题
  */
 (function () {
 'use strict';
@@ -1284,7 +1286,8 @@ function logCount(key) { var a = data.logs[key]; return a ? a.length : 0; }
 
 /* ===== 小记左滑删除 =====
  * 拖动内容层 .log-slide 向左，露出右侧固定的「删除」；同一时间只允许一行展开。
- * 纵向滑动不拦截（touch-action: pan-y），横向超过 6px 才判定为滑动。
+ * 纵向滑动不拦截（touch-action: pan-y），横向位移超过 12px 且明显大于纵向才判定为滑动。
+ * 手指走 touch 事件（可 preventDefault，不会被列表滚动 cancel），鼠标走 pointer 事件。
  */
 var LOG_SWIPE_W = 76;
 var openLogRow = null;
@@ -1314,35 +1317,38 @@ function closeLogSwipe(except) {
   }
 }
 function setupLogSwipe(li, slide) {
-  var sx = 0, sy = 0, base = 0, cur = 0, dragging = false, decided = false, moved = false;
+  var sx = 0, sy = 0, base = 0, cur = 0, active = false, axis = '', moved = false;
 
-  li.addEventListener('pointerdown', function (e) {
-    if (e.pointerType === 'mouse' && e.button !== 0) return;
+  function start(x, y) {
     closeLogSwipe(li);
-    sx = e.clientX; sy = e.clientY;
+    sx = x; sy = y;
     base = li.classList.contains('swiped') ? -LOG_SWIPE_W : 0;
-    cur = base; dragging = true; decided = false; moved = false;
+    cur = base; active = true; axis = ''; moved = false;
     slide.style.transition = 'none';
-    try { li.setPointerCapture(e.pointerId); } catch (err) {}
-  });
+  }
 
-  li.addEventListener('pointermove', function (e) {
-    if (!dragging) return;
-    var mx = e.clientX - sx, my = e.clientY - sy;
-    if (!decided) {
-      if (Math.abs(mx) < 6 && Math.abs(my) < 6) return;
-      if (Math.abs(my) > Math.abs(mx)) { dragging = false; return; }   // 纵向：交给列表滚动
-      decided = true;
+  /* 返回 true 表示这一下算横向拖动，调用方应阻止默认行为（避免列表跟着滚动） */
+  function move(x, y) {
+    if (!active) return false;
+    var mx = x - sx, my = y - sy, ax = Math.abs(mx), ay = Math.abs(my);
+    if (!axis) {
+      // 起手几像素常带抖动，先等位移够大再定方向，避免误判成纵向
+      if (ax < 12 && ay < 14) return false;
+      if (ax > ay * 1.2) axis = 'h';
+      else if (ay > ax * 1.5) { axis = 'v'; return false; }
+      else return false;   // 方向不明，继续观察
     }
+    if (axis !== 'h') return false;
     moved = true;
     cur = Math.max(-LOG_SWIPE_W, Math.min(0, base + mx));
     slide.style.transform = 'translateX(' + cur + 'px)';
     syncLogDel(li, cur);
-  });
+    return true;
+  }
 
-  function finish() {
-    if (!dragging) return;
-    dragging = false;
+  function end() {
+    if (!active) return;
+    active = false;
     if (moved) {
       lastLogDragAt = Date.now();
       var open = cur <= -LOG_SWIPE_W / 2;
@@ -1353,8 +1359,32 @@ function setupLogSwipe(li, slide) {
       openLogRow = null;
     }
   }
-  li.addEventListener('pointerup', finish);
-  li.addEventListener('pointercancel', finish);
+
+  /* 手指：用 touch 事件自己接管，pointer 事件在部分安卓机上会因列表滚动提前 cancel */
+  li.addEventListener('touchstart', function (e) {
+    if (e.touches.length === 1) start(e.touches[0].clientX, e.touches[0].clientY);
+  }, { passive: true });
+  li.addEventListener('touchmove', function (e) {
+    if (e.touches.length !== 1) return;
+    if (move(e.touches[0].clientX, e.touches[0].clientY)) e.preventDefault();
+  }, { passive: false });
+  li.addEventListener('touchend', function (e) {
+    if (moved) e.preventDefault();   // 拖完不要补发 click
+    end();
+  });
+  li.addEventListener('touchcancel', end);
+
+  /* 鼠标：保留桌面拖拽 */
+  li.addEventListener('pointerdown', function (e) {
+    if (e.pointerType !== 'mouse' || e.button !== 0) return;
+    start(e.clientX, e.clientY);
+  });
+  li.addEventListener('pointermove', function (e) {
+    if (e.pointerType !== 'mouse') return;
+    if (move(e.clientX, e.clientY)) e.preventDefault();
+  });
+  li.addEventListener('pointerup', function (e) { if (e.pointerType === 'mouse') end(); });
+  li.addEventListener('pointercancel', function (e) { if (e.pointerType === 'mouse') end(); });
 }
 
 function renderLogTabs() {
