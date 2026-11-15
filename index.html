@@ -7,12 +7,13 @@
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="application-name" content="微记">
 <meta name="apple-mobile-web-app-title" content="微记">
 <title>微记</title>
-<link rel="manifest" href="manifest.webmanifest">
+<link rel="manifest" href="manifest.webmanifest?v=p3.8.1">
 <link rel="icon" type="image/png" sizes="192x192" href="icon-192.png">
 <link rel="apple-touch-icon" href="apple-touch-icon.png">
-<link rel="stylesheet" href="styles.css?v=p3.8">
+<link rel="stylesheet" href="styles.css?v=p3.8.1">
 </head>
 <body>
 
@@ -205,8 +206,8 @@
 
     <div class="field">
       <label>安装</label>
-      <button type="button" class="ghost" id="install" hidden>安装到桌面</button>
-      <div class="field-hint">iPhone / iPad：Safari 分享 → 添加到主屏幕；Android / Chrome：菜单 → 安装应用。装在桌面后离线也能用。</div>
+      <button type="button" class="ghost" id="install">安装到桌面</button>
+      <div class="field-hint" id="install-hint">iPhone / iPad：Safari 分享 → 添加到主屏幕；Android / Chrome：菜单 → 安装应用。装在桌面后离线也能用。</div>
     </div>
 
     <div class="field">
@@ -220,7 +221,7 @@
       <button type="button" class="ghost danger" id="reset">清空全部数据</button>
     </div>
 
-    <div class="note">数据仅保存在本设备浏览器中 · 版本 P3.8 (2026-11-15)</div>
+    <div class="note">数据仅保存在本设备浏览器中 · 版本 P3.8.1 (2026-11-15)</div>
   </div>
 </section>
 
@@ -242,6 +243,6 @@
 </div>
 
 <div id="toast"></div>
-<script src="app.js?v=p3.8"></script>
+<script src="app.js?v=p3.8.1"></script>
 </body>
 </html>

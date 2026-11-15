@@ -1,4 +1,4 @@
-/* 微记 · 正式版 P3.8
+/* 微记 · 正式版 P3.8.1
  * 渲染管线沿用已验证的原型 v0.2（见 _proto/ 快照），在其上完成 P1/P2：
  *   - 数据层重构为 HANDOFF §三 的 v2 模型（version / granularity / duration /
  *     pool + shifts + rotation 占位），遵守五条不变量：
@@ -29,6 +29,8 @@
  *           模板与轮换收进默认折叠的「进阶」区
  *   - P3.8：品牌改名「微记」—— 标题 / manifest / 桌面名 / 引导 / 备份文件名统一，
  *           图标换成深底「微记」字标 + 轨道折线
+ *   - P3.8.1：安装入口常驻 —— 不再依赖 beforeinstallprompt；已装显示「已安装」，
+ *           拿不到 prompt 时给浏览器菜单引导；manifest 加版本查询串强制刷新
  */
 (function () {
 'use strict';
@@ -1904,30 +1906,68 @@ window.addEventListener('resize', function () {
 
 /* ===== PWA =====
  * Service Worker 只在 https / localhost 生效；用局域网 IP（http）打开时注册会失败，忽略即可。
- * 安装入口：Chrome / Edge 支持 beforeinstallprompt 时显示按钮；iOS 靠「添加到主屏幕」，只在提示里说明。
+ * 安装入口常驻：不依赖 beforeinstallprompt；拿不到 prompt 时给浏览器菜单引导，已装则显示「已安装」。
  */
 var deferredInstall = null;
+var installHint = document.getElementById('install-hint');
+
+function isStandalone() {
+  return (window.matchMedia && window.matchMedia('(display-mode: standalone)').matches) ||
+    window.navigator.standalone === true;
+}
+function isIOS() {
+  return /iPad|iPhone|iPod/.test(navigator.userAgent);
+}
+function renderInstall() {
+  if (isStandalone()) {
+    installBtn.textContent = '已安装';
+    installBtn.disabled = true;
+    installHint.textContent = '已在桌面独立运行，数据和浏览器里是同一份。';
+    return;
+  }
+  installBtn.textContent = '安装到桌面';
+  installBtn.disabled = false;
+  if (deferredInstall) {
+    installHint.textContent = '点上面的按钮，确认后就会创建桌面图标，名称是「微记」。';
+  } else if (isIOS()) {
+    installHint.textContent = 'Safari 底部「分享」→「添加到主屏幕」，名称会自动用「微记」；旧图标要先删掉。';
+  } else {
+    installHint.textContent = 'Chrome 点右上角 ⋮ →「安装应用」；没有这一项时选「添加到主屏幕」。旧图标要先删掉再装。';
+  }
+}
+
 window.addEventListener('beforeinstallprompt', function (e) {
   e.preventDefault();
   deferredInstall = e;
-  installBtn.hidden = false;
+  renderInstall();
 });
 window.addEventListener('appinstalled', function () {
   deferredInstall = null;
-  installBtn.hidden = true;
+  renderInstall();
   toast('已安装到桌面');
 });
 installBtn.addEventListener('click', function () {
+  if (isStandalone()) return;
   if (!deferredInstall) {
-    toast('请在浏览器菜单里选「安装应用 / 添加到主屏幕」');
+    renderInstall();
+    toast(isIOS() ? '请用 Safari 分享 → 添加到主屏幕' : '请点浏览器右上角 ⋮ → 安装应用');
     return;
   }
   var p = deferredInstall;
   deferredInstall = null;
-  installBtn.hidden = true;
   p.prompt();
-  if (p.userChoice) p.userChoice.catch(function () {});
+  if (p.userChoice) {
+    p.userChoice.then(function () { renderInstall(); }, function () { renderInstall(); });
+  } else {
+    renderInstall();
+  }
 });
+if (window.matchMedia) {
+  var mqStandalone = window.matchMedia('(display-mode: standalone)');
+  if (mqStandalone.addEventListener) mqStandalone.addEventListener('change', renderInstall);
+  else if (mqStandalone.addListener) mqStandalone.addListener(renderInstall);
+}
+renderInstall();
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', function () {
     navigator.serviceWorker.register('sw.js').catch(function () {});
