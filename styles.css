@@ -176,29 +176,10 @@ input { font: inherit; color: inherit; }
   justify-content: space-between;
   padding: calc(8px + env(safe-area-inset-top)) 8px 8px;
   border-bottom: 1px solid var(--line-soft);
-  /* iOS 27 主屏 PWA 会在顶部叠一层陈旧的系统模糊（WebKit bug 324438）。
-     这里只保留纯色不透明底，不再用 sticky / 额外固定层叠加；
-     该模糊靠 app.js 的 healIOSStatusBlur() 触发系统重算来清除。 */
+  /* iOS 主屏用 default 状态栏（P3.20）：内容整体位于状态栏下方，
+     系统模糊层够不到这里；standalone 下 env(safe-area-inset-top) 为 0，内边距自动收敛。 */
   background: var(--bg);
   z-index: 20;
-}
-/* iOS 27 顶部陈旧模糊自愈用的两块透明层：仅由 JS 在 iOS standalone 下插入 */
-.ios-blur-cover, .ios-blur-panel {
-  position: fixed;
-  pointer-events: none;
-  background: rgba(255,255,255,.01);
-}
-.ios-blur-cover {
-  top: 0; left: 0; right: 0; bottom: 0;
-  display: none;
-  z-index: 2147483646;
-}
-.ios-blur-panel {
-  top: 0; right: 0; bottom: 0;
-  width: 90%;
-  transform: translateX(110%);
-  transition: transform .3s ease;
-  z-index: 2147483647;
 }
 .titlewrap {
   flex: 1;

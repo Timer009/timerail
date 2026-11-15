@@ -48,6 +48,8 @@
  *   - P3.18：iOS 27 主屏 PWA 顶部陈旧模糊自愈（WebKit 324438）；日历加年份层（前后各一年）
  *   - P3.19：顶栏节日只显示节日名（国庆节），去掉「假期 / 第N天」，日期行降到 14px；
  *           顶栏文字去掉 ellipsis / 半像素对齐，修 iOS 主屏日期发虚
+ *   - P3.20：iOS 状态栏改 default —— 主屏内容整体退到状态栏下方，从根上离开系统模糊带；
+ *           移除 P3.18 的 cover/panel 自愈（已证伪）
  */
 (function () {
 'use strict';
@@ -2240,48 +2242,6 @@ var isDemo = false, forceOnboard = false;
   } catch (e) {}
 })();
 
-/* ===== iOS 27 顶部陈旧模糊自愈（P3.18）=====
- * iOS 27 主屏 PWA 会在状态栏一带留一层陈旧的系统模糊：捏合缩放会暂时变清晰，松手又回来。
- * 这是 WebKit bug 324438，网页侧关不掉（backdrop-filter 已全部移除仍无效）。
- * 规避：临时插入一块固定面板，从屏外滑入再滑出，逼系统重算该区域；面板留在屏外不删除。
- * 只在 iOS standalone 生效，Safari 与安卓不插入任何节点。
- */
-var iosBlurCover = null, iosBlurPanel = null, iosBlurBusy = false;
-
-/* 滑入 → 停 500ms → 滑出屏外；面板不删除，常驻屏幕右侧外 */
-function nudgeIOSStatusBlur() {
-  if (!iosBlurPanel || iosBlurBusy || document.hidden) return;
-  iosBlurBusy = true;
-  iosBlurCover.style.display = 'block';
-  iosBlurPanel.style.transform = 'translateX(0)';
-  setTimeout(function () {
-    iosBlurCover.style.display = 'none';
-    iosBlurPanel.style.transform = 'translateX(110%)';
-    iosBlurBusy = false;
-  }, 500);
-}
-
-function healIOSStatusBlur() {
-  var ua = navigator.userAgent || '';
-  if (!/iPhone|iPad|iPod/.test(ua)) return;
-  var standalone = false;
-  try {
-    standalone = (window.matchMedia && window.matchMedia('(display-mode: standalone)').matches) ||
-      navigator.standalone === true;
-  } catch (e) {}
-  if (!standalone) return;
-  if (iosBlurPanel) { nudgeIOSStatusBlur(); return; }
-  iosBlurCover = el('div', 'ios-blur-cover');
-  iosBlurPanel = el('div', 'ios-blur-panel');
-  iosBlurPanel.id = 'ios-blur-panel';
-  iosBlurCover.setAttribute('aria-hidden', 'true');
-  iosBlurPanel.setAttribute('aria-hidden', 'true');
-  document.body.appendChild(iosBlurCover);
-  document.body.appendChild(iosBlurPanel);
-  void iosBlurPanel.offsetWidth;   // 先落一次布局，后面的位移才会真正触发重绘
-  setTimeout(nudgeIOSStatusBlur, 300);
-}
-
 /* ===== 启动 ===== */
 probeStorage();
 applyTheme();          // 先按设置落主题，再渲染轨道
@@ -2289,7 +2249,6 @@ view.date = shiftDateOf(new Date());
 render();
 scrollToNow(false);   // 先同步定位一次，rAF 在后台标签/离屏 iframe 里可能被节流
 requestAnimationFrame(function () { scrollToNow(false); });
-healIOSStatusBlur();  // 仅 iOS 主屏 PWA：清掉顶部那层陈旧系统模糊
 if (loadNotice) setTimeout(function () { toast(loadNotice); }, 300);
 /* 首访自动引导；?demo 会挡住截图，?onboard=1 可强制看 */
 if (forceOnboard || (!data.settings.onboarded && !isDemo)) {
@@ -2298,11 +2257,7 @@ if (forceOnboard || (!data.settings.onboarded && !isDemo)) {
 /* 30 秒重绘：紧跟"现在"线；切回前台立即重绘，不等计时器 */
 setInterval(render, 30000);
 document.addEventListener('visibilitychange', function () {
-  if (!document.hidden) {
-    render();
-    /* 从后台回来时系统模糊可能重新出现，再自愈一次 */
-    if (iosBlurPanel) setTimeout(nudgeIOSStatusBlur, 300);
-  }
+  if (!document.hidden) render();
 });
 /* 转屏/改窗宽后横向量宽会变，重算一次（防抖） */
 var rzTimer = null;

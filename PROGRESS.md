@@ -1272,3 +1272,33 @@ P3.9 的实现是「条目只存 type，徽标实时读 settings.logCustom」，
 - ✅ 截图核对：390×844 下「10月1日 周四 · 国庆节」完整居中，与右侧图标间距正常
 - ⏳ 需 iOS 主屏 PWA 实机确认：彻底退出再打开（换到 p3.19）后日期两行是否清晰
 - 若仍发虚：改走状态栏路线（移除 `black-translucent` 后重装 PWA），或把日期行移出顶栏（例如与轨道顶部合并）
+- ❌ 2026-11-16 用户实机反馈：P3.19 后仍然模糊 → 走状态栏路线（见 P3.20）
+
+---
+
+## P3.20 · iOS 状态栏改 default（离开系统模糊带）⏳ 2026-11-16
+
+### 一、改动
+
+- `apple-mobile-web-app-status-bar-style`：`black-translucent` → **`default`**。主屏 PWA 的网页内容整体退到状态栏下方，系统那层陈旧的玻璃模糊只作用于状态栏本身，盖不到日期文字；这是网页侧最后一条可控路线。
+- `viewport-fit=cover` 保留（底部 Home 指示条安全区仍需要）。
+- 顶栏内边距仍是 `calc(8px + env(safe-area-inset-top))`：default 下 standalone 的 `env(safe-area-inset-top)` 为 0，内边距自动收敛成 8px，顶栏高度 55px（8+38+8+1 边框），无需改布局。
+- 删除 P3.18 的 `healIOSStatusBlur()` / `nudgeIOSStatusBlur()` 与 `.ios-blur-cover/.ios-blur-panel` 样式、`visibilitychange` 里的自愈调用 —— 已被实机证伪，留着只是死代码。
+
+### 二、必须重装才生效
+
+iOS 会在「添加到主屏幕」时快照 `apple-mobile-web-app-*` 元信息，改 meta 不会热更新到已装的图标上。验收步骤：
+
+1. 长按主屏「微记」→ 删除 App（**数据在 Safari 的 localStorage，删图标不会丢**）
+2. Safari 打开 https://timer009.github.io/timerail/ → 分享 → 添加到主屏幕
+3. 从主屏打开，看顶栏日期是否清晰
+
+### 版本
+
+`?v=p3.20`、SW `timerail-p3.20`、设置页 P3.20 (2026-11-16)。
+
+### 验收
+
+- ✅ 无头自测 18 项全绿：meta=default、viewport 仍含 cover、无 ios-blur 节点与函数、顶栏 55px、日期 14px/20px 且无 ellipsis、副标题 16px、轨道 24 节点、月视图 42 格、年份层 3 项、遮罩关闭、浅色主题、选天不写坏存储
+- ✅ 布局实测（390 宽）：顶栏 0–390、nav-right 268–382、底栏 0–390，无横向溢出
+- ⏳ 需 iOS 主屏 PWA **重装后**实机确认顶部日期是否清晰
