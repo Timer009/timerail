@@ -1,0 +1,237 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, interactive-widget=resizes-content">
+<meta name="theme-color" content="#0e131f">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="时间轨">
+<title>时间轨 TimeRail</title>
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" type="image/png" sizes="192x192" href="icon-192.png">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<link rel="stylesheet" href="styles.css?v=p3.5">
+</head>
+<body>
+
+<header class="topbar">
+  <button class="icon" id="prev" aria-label="前一天">‹</button>
+  <div class="titlewrap">
+    <div class="title" id="date-label">—</div>
+    <div class="sub" id="sub-label">—</div>
+  </div>
+  <div class="nav-right">
+    <button class="icon" id="next" aria-label="后一天">›</button>
+    <button class="icon" id="orient" aria-label="切换为横向">⇄</button>
+    <button class="icon" id="gear" aria-label="设置">⚙</button>
+  </div>
+</header>
+
+<div id="storebar" hidden>
+  <span>⚠ 保存失败：隐私模式或存储空间已满，改动可能丢失</span>
+  <button type="button" id="storebar-retry">重试</button>
+</div>
+
+<main id="wrap">
+  <div id="track">
+    <svg id="svg" xmlns="http://www.w3.org/2000/svg"></svg>
+    <div id="layer"></div>
+  </div>
+</main>
+
+<footer class="bottombar">
+  <div class="stats">
+    <span id="stat-done">完成 0/0</span>
+    <span id="stat-plan">已规划 0h</span>
+    <span class="linkwrap">
+      <button type="button" class="pool-link" id="pool-link" hidden>顺延池 0</button>
+      <button type="button" class="log-link" id="log-link">日志</button>
+    </span>
+  </div>
+  <div class="bar">
+    <div class="seg" id="gseg">
+      <button type="button" data-g="30">30分</button>
+      <button type="button" data-g="60">1时</button>
+      <button type="button" data-g="120">2时</button>
+    </div>
+    <button type="button" class="ghost" id="go-now">回到现在</button>
+  </div>
+</footer>
+
+<div id="backdrop"></div>
+
+<!-- 时段详情 -->
+<section class="sheet" id="sheet" aria-hidden="true">
+  <div class="sheet-head">
+    <div>
+      <div class="sheet-title" id="sheet-title">—</div>
+      <div class="sub" id="sheet-sub"></div>
+    </div>
+    <button class="icon" id="sheet-close" aria-label="关闭">✕</button>
+  </div>
+  <ul class="list" id="sheet-list"></ul>
+  <form class="addbar" id="add-form">
+    <input id="add-input" type="text" maxlength="40" placeholder="这个时段做什么…" autocomplete="off">
+    <button class="primary" type="submit">加</button>
+  </form>
+</section>
+
+<!-- 通用选择器：状态 / 移动目标 / 确认框 -->
+<section class="sheet" id="chooser" aria-hidden="true">
+  <div class="sheet-head">
+    <div class="sheet-title" id="chooser-title">选择</div>
+    <button class="icon" id="chooser-close" aria-label="关闭">✕</button>
+  </div>
+  <div class="confirm-msg" id="chooser-msg" hidden></div>
+  <ul class="list" id="chooser-list"></ul>
+</section>
+
+<!-- 顺延池 -->
+<section class="sheet" id="pool-sheet" aria-hidden="true">
+  <div class="sheet-head">
+    <div>
+      <div class="sheet-title">顺延池</div>
+      <div class="sub" id="pool-sub">在事项「⋯」里可手动放入顺延池</div>
+    </div>
+    <button class="icon" id="pool-close" aria-label="关闭">✕</button>
+  </div>
+  <ul class="list" id="pool-list"></ul>
+</section>
+
+<!-- 班次日志 -->
+<section class="sheet" id="log-sheet" aria-hidden="true">
+  <div class="sheet-head">
+    <div>
+      <div class="sheet-title">班次日志</div>
+      <div class="sub" id="log-sub">—</div>
+    </div>
+    <button class="icon" id="log-close" aria-label="关闭">✕</button>
+  </div>
+  <div class="log-tabs" id="log-tabs">
+    <button type="button" data-type="handover" class="active">交接</button>
+    <button type="button" data-type="issue">异常</button>
+  </div>
+  <ul class="list" id="log-list"></ul>
+  <form class="addbar" id="log-form">
+    <input id="log-input" type="text" maxlength="80" placeholder="交接事项 / 异常情况…" autocomplete="off">
+    <button class="primary" type="submit">记</button>
+  </form>
+</section>
+
+<!-- 设置 -->
+<section class="sheet" id="settings" aria-hidden="true">
+  <div class="sheet-head">
+    <div>
+      <div class="sheet-title">设置</div>
+      <div class="sub">粒度只改视图，不动数据</div>
+    </div>
+    <button class="icon" id="set-close" aria-label="关闭">✕</button>
+  </div>
+
+  <div class="sheet-body">
+    <div class="field">
+      <label>一天的起点</label>
+      <div class="seg wide" id="startseg">
+        <button type="button" data-start="0">00:00</button>
+        <button type="button" data-start="480">08:00</button>
+        <button type="button" data-start="1200">20:00</button>
+      </div>
+    </div>
+
+    <div class="field">
+      <label>班次名称</label>
+      <input id="shift-name" type="text" maxlength="10" placeholder="如：夜班">
+    </div>
+
+    <div class="field">
+      <label>班次模板</label>
+      <ul class="tpl-list" id="tpl-list"></ul>
+      <form class="tpl-form" id="tpl-form">
+        <input id="tpl-name" type="text" maxlength="10" placeholder="模板名，如 夜班" autocomplete="off">
+        <div class="tpl-line">
+          <input id="tpl-start" type="time" step="60" value="20:00" aria-label="班次起点">
+          <select id="tpl-dur" aria-label="班次时长">
+            <option value="360">6 小时</option>
+            <option value="480">8 小时</option>
+            <option value="720" selected>12 小时</option>
+            <option value="1440">24 小时</option>
+          </select>
+          <button class="ghost" type="submit">新建</button>
+        </div>
+      </form>
+      <div class="field-hint">点模板名称可改名；「套用」会立即切换当前班次。</div>
+    </div>
+
+    <div class="field">
+      <label>轮转</label>
+      <div class="rot-cycle" id="rot-cycle"></div>
+      <div class="rot-actions">
+        <button type="button" class="ghost mini" id="rot-add">+ 加一天</button>
+        <button type="button" class="ghost mini" id="rot-toggle">启用轮转</button>
+      </div>
+      <div class="rot-anchor">
+        <span>锚定日期</span>
+        <input type="date" id="rot-anchor">
+      </div>
+      <div class="field-hint" id="rot-hint">启用后从锚定日期起，按周期逐日套用模板；不启用时用上面的手动班次</div>
+    </div>
+
+    <div class="field">
+      <label>轨道风格</label>
+      <div class="seg wide four" id="styleseg">
+        <button type="button" data-style="wave">蛇形</button>
+        <button type="button" data-style="arc">大弧</button>
+        <button type="button" data-style="rail">直线</button>
+        <button type="button" data-style="zigzag">折线</button>
+      </div>
+    </div>
+
+    <div class="field">
+      <label>使用引导</label>
+      <button type="button" class="ghost" id="show-onboard">重看 3 步引导</button>
+    </div>
+
+    <div class="field">
+      <label>安装</label>
+      <button type="button" class="ghost" id="install" hidden>安装到桌面</button>
+      <div class="field-hint">iPhone / iPad：Safari 分享 → 添加到主屏幕；Android / Chrome：菜单 → 安装应用。装在桌面后离线也能用。</div>
+    </div>
+
+    <div class="field">
+      <label>数据</label>
+      <div class="data-actions">
+        <button type="button" class="ghost" id="export">导出备份</button>
+        <button type="button" class="ghost" id="import">导入备份</button>
+        <input type="file" id="import-file" accept=".json,application/json" hidden>
+      </div>
+      <div class="field-hint">备份包含所有日期、事项、顺延池、班次模板、轮转与日志；导入会覆盖本机数据，建议先导出。</div>
+      <button type="button" class="ghost danger" id="reset">清空全部数据</button>
+    </div>
+
+    <div class="note">数据仅保存在本设备浏览器中 · 版本 P3.5 (2026-11-15)</div>
+  </div>
+</section>
+
+<!-- 3 步引导 -->
+<div class="onboard" id="onboard" hidden>
+  <div class="onboard-card" role="dialog" aria-modal="true" aria-labelledby="ob-title">
+    <div class="ob-step" id="ob-step">1 / 3</div>
+    <div class="ob-title" id="ob-title">—</div>
+    <div class="ob-body" id="ob-body">—</div>
+    <div class="ob-dots" id="ob-dots"><i class="on"></i><i></i><i></i></div>
+    <div class="ob-actions">
+      <button type="button" class="ghost" id="ob-skip">跳过</button>
+      <div class="ob-nav">
+        <button type="button" class="ghost" id="ob-back" hidden>上一步</button>
+        <button type="button" class="primary" id="ob-next">下一步</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div id="toast"></div>
+<script src="app.js?v=p3.5"></script>
+</body>
+</html>
