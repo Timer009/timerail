@@ -1,4 +1,4 @@
-/* 微记 · 正式版 P3.14
+/* 微记 · 正式版 P3.18
  * 渲染管线沿用已验证的原型 v0.2（见 _proto/ 快照），在其上完成 P1/P2：
  *   - 数据层重构为 HANDOFF §三 的 v2 模型（version / granularity / duration /
  *     pool + shifts + rotation 占位），遵守五条不变量：
@@ -43,6 +43,9 @@
  *   - P3.13：日历选天 —— 点顶栏日期弹出月历，任意跳转，有记录的日子带小点
  *   - P3.13.1：顶栏改不透明纯色，修 iOS 主屏运行日期文字发虚
  *   - P3.14：节日按放假区间显示 —— 顶栏「国庆假期 第3天」，区间为通常长度，不含调休
+ *   - P3.15：浅色模式 —— 跟随系统 / 深色 / 浅色三选一，只重设主题变量
+ *   - P3.16：进阶区卡片化 —— 默认折叠为一张卡片，展开后分组
+ *   - P3.18：iOS 27 主屏 PWA 顶部陈旧模糊自愈（WebKit 324438）；日历加年份层（前后各一年）
  */
 (function () {
 'use strict';
@@ -1836,21 +1839,65 @@ importFile.addEventListener('change', function () {
 document.getElementById('prev').addEventListener('click', function () { shiftDay(-1); });
 document.getElementById('next').addEventListener('click', function () { shiftDay(1); });
 
-/* ===== 日历选天（P3.13）：点顶栏日期打开，任意跳转 ===== */
+/* ===== 日历选天（P3.13 / P3.18 两层）：点顶栏日期打开，任意跳转 =====
+ * 月视图 → 点顶部年月栏进入年份层（查看年的前后各一年）→ 选年回到同一月份的月视图。
+ */
 var calEl = document.getElementById('cal');
 var calY = 0, calM = 0;
+var calLevel = 'month';
 
 function openCal() {
   calY = view.date.getFullYear();
   calM = view.date.getMonth();
+  calLevel = 'month';
   renderCal();
   calEl.hidden = false;
 }
 function closeCal() { calEl.hidden = true; }
 
 function renderCal() {
-  document.getElementById('cal-ym').textContent = calY + '年' + (calM + 1) + '月';
+  var ymEl = document.getElementById('cal-ym');
+  var prevEl = document.getElementById('cal-prev');
+  var nextEl = document.getElementById('cal-next');
+  var weekEl = document.getElementById('cal-week');
   var grid = document.getElementById('cal-grid');
+  var yearsEl = document.getElementById('cal-years');
+  var todayEl = document.getElementById('cal-today');
+
+  if (calLevel === 'year') {
+    ymEl.textContent = '选择年份';
+    prevEl.hidden = true;
+    nextEl.hidden = true;
+    weekEl.hidden = true;
+    grid.hidden = true;
+    todayEl.hidden = true;
+    yearsEl.hidden = false;
+    yearsEl.innerHTML = '';
+    var thisY = shiftDateOf(new Date()).getFullYear();
+    for (var k = -1; k <= 1; k++) {
+      var y = calY + k;
+      var yb = el('button', 'cal-year' + (y === calY ? ' sel' : ''), y + ' 年');
+      yb.type = 'button';
+      if (y === thisY) yb.appendChild(el('span', 'cal-year-tag', '今年'));
+      yb.addEventListener('click', (function (yy) {
+        return function () {
+          calY = yy;
+          calLevel = 'month';
+          renderCal();
+        };
+      })(y));
+      yearsEl.appendChild(yb);
+    }
+    return;
+  }
+
+  ymEl.textContent = calY + '年' + (calM + 1) + '月';
+  prevEl.hidden = false;
+  nextEl.hidden = false;
+  weekEl.hidden = false;
+  grid.hidden = false;
+  todayEl.hidden = false;
+  yearsEl.hidden = true;
   grid.innerHTML = '';
   var first = new Date(calY, calM, 1);
   var start = first.getDay();                 // 周日=0
@@ -1881,6 +1928,10 @@ function renderCal() {
 }
 
 document.getElementById('date-label').addEventListener('click', openCal);
+document.getElementById('cal-ym').addEventListener('click', function () {
+  calLevel = calLevel === 'year' ? 'month' : 'year';
+  renderCal();
+});
 document.getElementById('cal-prev').addEventListener('click', function () {
   calM--; if (calM < 0) { calM = 11; calY--; }
   renderCal();
@@ -2186,6 +2237,48 @@ var isDemo = false, forceOnboard = false;
   } catch (e) {}
 })();
 
+/* ===== iOS 27 顶部陈旧模糊自愈（P3.18）=====
+ * iOS 27 主屏 PWA 会在状态栏一带留一层陈旧的系统模糊：捏合缩放会暂时变清晰，松手又回来。
+ * 这是 WebKit bug 324438，网页侧关不掉（backdrop-filter 已全部移除仍无效）。
+ * 规避：临时插入一块固定面板，从屏外滑入再滑出，逼系统重算该区域；面板留在屏外不删除。
+ * 只在 iOS standalone 生效，Safari 与安卓不插入任何节点。
+ */
+var iosBlurCover = null, iosBlurPanel = null, iosBlurBusy = false;
+
+/* 滑入 → 停 500ms → 滑出屏外；面板不删除，常驻屏幕右侧外 */
+function nudgeIOSStatusBlur() {
+  if (!iosBlurPanel || iosBlurBusy || document.hidden) return;
+  iosBlurBusy = true;
+  iosBlurCover.style.display = 'block';
+  iosBlurPanel.style.transform = 'translateX(0)';
+  setTimeout(function () {
+    iosBlurCover.style.display = 'none';
+    iosBlurPanel.style.transform = 'translateX(110%)';
+    iosBlurBusy = false;
+  }, 500);
+}
+
+function healIOSStatusBlur() {
+  var ua = navigator.userAgent || '';
+  if (!/iPhone|iPad|iPod/.test(ua)) return;
+  var standalone = false;
+  try {
+    standalone = (window.matchMedia && window.matchMedia('(display-mode: standalone)').matches) ||
+      navigator.standalone === true;
+  } catch (e) {}
+  if (!standalone) return;
+  if (iosBlurPanel) { nudgeIOSStatusBlur(); return; }
+  iosBlurCover = el('div', 'ios-blur-cover');
+  iosBlurPanel = el('div', 'ios-blur-panel');
+  iosBlurPanel.id = 'ios-blur-panel';
+  iosBlurCover.setAttribute('aria-hidden', 'true');
+  iosBlurPanel.setAttribute('aria-hidden', 'true');
+  document.body.appendChild(iosBlurCover);
+  document.body.appendChild(iosBlurPanel);
+  void iosBlurPanel.offsetWidth;   // 先落一次布局，后面的位移才会真正触发重绘
+  setTimeout(nudgeIOSStatusBlur, 300);
+}
+
 /* ===== 启动 ===== */
 probeStorage();
 applyTheme();          // 先按设置落主题，再渲染轨道
@@ -2193,6 +2286,7 @@ view.date = shiftDateOf(new Date());
 render();
 scrollToNow(false);   // 先同步定位一次，rAF 在后台标签/离屏 iframe 里可能被节流
 requestAnimationFrame(function () { scrollToNow(false); });
+healIOSStatusBlur();  // 仅 iOS 主屏 PWA：清掉顶部那层陈旧系统模糊
 if (loadNotice) setTimeout(function () { toast(loadNotice); }, 300);
 /* 首访自动引导；?demo 会挡住截图，?onboard=1 可强制看 */
 if (forceOnboard || (!data.settings.onboarded && !isDemo)) {
@@ -2201,7 +2295,11 @@ if (forceOnboard || (!data.settings.onboarded && !isDemo)) {
 /* 30 秒重绘：紧跟"现在"线；切回前台立即重绘，不等计时器 */
 setInterval(render, 30000);
 document.addEventListener('visibilitychange', function () {
-  if (!document.hidden) render();
+  if (!document.hidden) {
+    render();
+    /* 从后台回来时系统模糊可能重新出现，再自愈一次 */
+    if (iosBlurPanel) setTimeout(nudgeIOSStatusBlur, 300);
+  }
 });
 /* 转屏/改窗宽后横向量宽会变，重算一次（防抖） */
 var rzTimer = null;

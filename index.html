@@ -27,14 +27,12 @@
   if (m) m.setAttribute('content', light ? '#f5f8fc' : '#0e131f');
 })();
 </script>
-<link rel="manifest" href="manifest.webmanifest?v=p3.17">
+<link rel="manifest" href="manifest.webmanifest?v=p3.18">
 <link rel="icon" type="image/png" sizes="192x192" href="icon-192.png">
 <link rel="apple-touch-icon" href="apple-touch-icon.png">
-<link rel="stylesheet" href="styles.css?v=p3.17">
+<link rel="stylesheet" href="styles.css?v=p3.18">
 </head>
 <body>
-
-<div class="status-veil" aria-hidden="true"></div>
 
 <header class="topbar">
   <button class="icon" id="prev" aria-label="前一天">‹</button>
@@ -161,13 +159,14 @@
   <div class="modal-card cal-card" role="dialog" aria-modal="true" aria-label="选择日期">
     <div class="cal-head">
       <button type="button" class="icon" id="cal-prev" aria-label="上个月">‹</button>
-      <div class="cal-ym" id="cal-ym">—</div>
+      <button type="button" class="cal-ym" id="cal-ym" aria-label="切换年份">—</button>
       <button type="button" class="icon" id="cal-next" aria-label="下个月">›</button>
     </div>
-    <div class="cal-week">
+    <div class="cal-week" id="cal-week">
       <span>日</span><span>一</span><span>二</span><span>三</span><span>四</span><span>五</span><span>六</span>
     </div>
     <div class="cal-grid" id="cal-grid"></div>
+    <div class="cal-years" id="cal-years" hidden></div>
     <button type="button" class="ghost cal-today" id="cal-today">回到今天</button>
   </div>
 </div>
@@ -283,7 +282,7 @@
       <button type="button" class="ghost danger" id="reset">清空全部数据</button>
     </div>
 
-    <div class="note">数据仅保存在本设备浏览器中 · 版本 P3.17 (2026-11-16)</div>
+    <div class="note">数据仅保存在本设备浏览器中 · 版本 P3.18 (2026-11-16)</div>
   </div>
 </section>
 
@@ -305,6 +304,6 @@
 </div>
 
 <div id="toast"></div>
-<script src="app.js?v=p3.17"></script>
+<script src="app.js?v=p3.18"></script>
 </body>
 </html>

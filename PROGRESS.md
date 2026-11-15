@@ -1203,3 +1203,39 @@ P3.9 的实现是「条目只存 type，徽标实时读 settings.logCustom」，
 - ✅ 无头自测 16 项全绿：顶栏 sticky/贴顶/不透明/safe-area、轨道从顶栏下方开始、24 节点、底栏不溢出、零 backdrop-filter、深浅色正常
 - ⏳ 需 iOS 主屏 PWA 实机确认：彻底退出应用再打开（让 SW 换到 p3.17），顶部日期是否清晰
 - 若仍模糊：下一步尝试把 `.status-veil` 高度从 11px 加到 `env(safe-area-inset-top)`，或移除已废弃的 `apple-mobile-web-app-status-bar-style` 后重装 PWA
+- ❌ 2026-11-16 用户实机反馈：仍发虚，sticky + 11px veil 无效，方案作废（P3.18 换 JS 自愈）
+
+---
+
+## P3.18 · iOS 顶部陈旧模糊自愈 + 日历年份层 ✅ 2026-11-16（待真机验收）
+
+### 一、顶部发虚（替代方案）
+
+- 判定：系统那层模糊是**陈旧的合成结果**——捏合缩放会强制重栅格化所以清晰，松手回 100% 系统又把旧图盖回来。P3.17 的 sticky / veil 改变了绘制方式，但没触发那次重算，所以无效。
+- 新规避（社区实机方案）：启动后插入两块极低透明度的固定层，`cover` 全屏铺底、`panel` 90% 宽，先把 panel 从屏外 `translateX(110%)` 移到 `translateX(0)`，停 500ms 再移出屏外，并把 **panel 留在 DOM 里不删**，逼系统重算顶部区域。
+- 只对 iOS + standalone 生效：UA 命中 `iPhone|iPad|iPod` 且 `display-mode: standalone` 或 `navigator.standalone`。Safari、桌面、安卓一行 DOM 都不插。
+- 从后台切回前台时再自愈一次（`visibilitychange` → `nudgeIOSStatusBlur()`，带 500ms 忙标志防抖）。
+- 顺带清理 P3.17 失败的痕迹：`.topbar` 回到 `position: relative`（页面本身不滚动，sticky 无收益却会多一层合成），删除 `.status-veil` 节点与样式；顶栏保持不透明 `var(--bg)`。
+
+### 二、日历年份层
+
+- 层级：点顶栏日期 → 月视图（日期 + 星期）；点顶部「2026年11月」→ 年份层；再点「选择年份」→ 回月视图。
+- 年份层显示**当前查看年的前后各一年**（如 2026 → 2025/2026/2027），当前查看年高亮，今年带「今年」小标签。
+- 选一年 → 回到同一月份的月视图（月份保持不变），年份范围随新的 `calY` 走。
+- 年份层里隐藏左右箭头、周标题、42 格与「回到今天」，只留三个年份按钮（44px 高）；`calLevel` 状态为 `month | year`，`openCal()` 每次重置为 `month`。
+- `.cal-ym` 由 `div` 改为 `button`（`flex: 1` 居中），全层都可点。
+
+### 改动文件
+
+`index.html`（日历结构：`#cal-week` 加 id、`#cal-ym` 改 button、新增 `#cal-years`；删 `.status-veil`）、`styles.css`（顶栏回 relative、删 veil、加 `.ios-blur-cover/.ios-blur-panel`、`.cal-years/.cal-year`、hidden 兜底）、`app.js`（`healIOSStatusBlur/nudgeIOSStatusBlur`、`calLevel` 与年份层渲染）、`sw.js`。
+
+### 版本
+
+`?v=p3.18`、SW `timerail-p3.18`、设置页 P3.18 (2026-11-16)。
+
+### 验收
+
+- ✅ 无头自测 41 项全绿：版本串、顶栏 relative、veil 已移除、零 backdrop-filter、非 iOS 不插修复层；月视图 42 格/标题/周标题/箭头；年份层 3 年、范围、选中、今年标签、44px 高；选年回月且月份保持、范围跟随；再点顶部返回；翻月、选天、回到今天；390 宽不溢出；深浅色变量生效
+- ✅ 截图核对：月视图 42 格与「16」今日高亮、年份层三按钮居中、选中蓝边
+- ⏳ 需 iOS 主屏 PWA 实机确认：彻底退出再打开（换到 p3.18）后顶部日期是否清晰；年份层交互是否顺手
+- 若仍发虚：下一步移除 `apple-mobile-web-app-status-bar-style=black-translucent`（改 `default`/`black`）后重装 PWA，让内容彻底退出状态栏区域

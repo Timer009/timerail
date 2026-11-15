@@ -169,32 +169,36 @@ input { font: inherit; color: inherit; }
 
 /* ===== 顶栏 ===== */
 .topbar {
-  position: sticky;
-  top: 0;
+  position: relative;
   flex: none;
   display: flex;
   align-items: center;
   justify-content: space-between;
   padding: calc(8px + env(safe-area-inset-top)) 8px 8px;
   border-bottom: 1px solid var(--line-soft);
-  /* iOS 27 主屏 PWA 会在顶部叠一层系统模糊（WebKit bug 324438）。
-     顶栏吸顶 + 不透明底 + safe-area 背景可触发其正常合成路径；另配 .status-veil 兜底。
-     页面内也不要再使用 backdrop-filter。 */
+  /* iOS 27 主屏 PWA 会在顶部叠一层陈旧的系统模糊（WebKit bug 324438）。
+     这里只保留纯色不透明底，不再用 sticky / 额外固定层叠加；
+     该模糊靠 app.js 的 healIOSStatusBlur() 触发系统重算来清除。 */
   background: var(--bg);
   z-index: 20;
 }
-/* iOS 27 PWA 顶部系统模糊兜底：仅 standalone 显示，画在状态栏区域，视觉与顶栏同色 */
-.status-veil { display: none; }
-@media (display-mode: standalone) {
-  .status-veil {
-    display: block;
-    position: fixed;
-    top: 0; left: 0; right: 0;
-    height: 11px;
-    background: var(--bg);
-    pointer-events: none;
-    z-index: 21;
-  }
+/* iOS 27 顶部陈旧模糊自愈用的两块透明层：仅由 JS 在 iOS standalone 下插入 */
+.ios-blur-cover, .ios-blur-panel {
+  position: fixed;
+  pointer-events: none;
+  background: rgba(255,255,255,.01);
+}
+.ios-blur-cover {
+  top: 0; left: 0; right: 0; bottom: 0;
+  display: none;
+  z-index: 2147483646;
+}
+.ios-blur-panel {
+  top: 0; right: 0; bottom: 0;
+  width: 90%;
+  transform: translateX(110%);
+  transition: transform .3s ease;
+  z-index: 2147483647;
 }
 .titlewrap {
   flex: 1;
@@ -863,7 +867,15 @@ body.horiz .hint {
   display: flex; align-items: center; justify-content: space-between;
   margin-bottom: 4px;
 }
-.cal-ym { font-size: 15px; font-weight: 600; letter-spacing: .3px; }
+.cal-ym {
+  flex: 1;
+  text-align: center;
+  font-size: 15px; font-weight: 600; letter-spacing: .3px;
+  padding: 6px 12px;
+  border-radius: 9px;
+  color: var(--text);
+}
+.cal-ym:active { background: var(--panel-2); }
 .cal-head .icon { width: 34px; height: 34px; font-size: 20px; }
 .cal-week {
   display: grid; grid-template-columns: repeat(7, 1fr);
@@ -898,6 +910,30 @@ body.horiz .hint {
 }
 .cal-d.sel.has::after { background: var(--done); }
 .cal-today { width: 100%; margin-top: 12px; padding: 9px 0; }
+
+/* 年份层（P3.18）：年月栏点一下切过来，选一年回月视图 */
+.cal-years { display: flex; flex-direction: column; gap: 8px; margin-top: 6px; }
+.cal-year {
+  display: flex; align-items: center; justify-content: center; gap: 6px;
+  min-height: 44px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: var(--panel-2);
+  font-size: 15px;
+  font-variant-numeric: tabular-nums;
+}
+.cal-year:active { background: var(--panel); }
+.cal-year.sel {
+  border-color: var(--blue-line);
+  background: var(--blue-bg);
+  color: var(--blue-ink);
+  font-weight: 600;
+}
+.cal-year-tag { font-size: 11px; font-weight: 400; color: var(--muted); }
+.cal-year.sel .cal-year-tag { color: inherit; opacity: .8; }
+/* hidden 优先级兜底：这些元素默认是 grid / flex，不加会盖不住 */
+.cal-week[hidden], .cal-grid[hidden], .cal-years[hidden],
+.cal-today[hidden], .cal-head .icon[hidden] { display: none; }
 
 /* 班次模板 */
 .tpl-list { list-style: none; margin-bottom: 6px; }
