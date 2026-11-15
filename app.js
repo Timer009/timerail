@@ -1,4 +1,4 @@
-/* 微记 · 正式版 P3.9
+/* 微记 · 正式版 P3.9.1
  * 渲染管线沿用已验证的原型 v0.2（见 _proto/ 快照），在其上完成 P1/P2：
  *   - 数据层重构为 HANDOFF §三 的 v2 模型（version / granularity / duration /
  *     pool + shifts + rotation 占位），遵守五条不变量：
@@ -32,7 +32,8 @@
  *   - P3.8.1：安装入口常驻 —— 不再依赖 beforeinstallprompt；已装显示「已安装」，
  *           拿不到 prompt 时给浏览器菜单引导；manifest 加版本查询串强制刷新
  *   - P3.8.2：底栏重排 —— 「小记 N」升为 13px 胶囊并移到粒度切换同排，「回到现在」缩为 12px
- *   - P3.9：小记第三个分类「＋ 自定义」—— 单类型，4 字名 + 表情，点已选胶囊改名，历史条目跟随
+ *   - P3.9：小记第三个分类「＋ 自定义」—— 单类型，4 字名 + 表情，点已选胶囊改名
+ *   - P3.9.1：自定义小记的图标/名字记录时定格 —— 改类型只影响新条目，旧条目不回头改写
  */
 (function () {
 'use strict';
@@ -207,6 +208,11 @@ function normalize(d) {
         text: text.slice(0, 80),
         createdAt: typeof l.createdAt === 'string' ? l.createdAt : iso()
       };
+      // 自定义分类的图标与名字在记录当时定格：之后改类型不回头改写旧条目
+      if (lt === 'custom') {
+        if (LOG_EMOJIS.indexOf(l.emoji) >= 0) out.emoji = l.emoji;
+        if (typeof l.label === 'string' && l.label.trim()) out.label = l.label.trim().slice(0, 4);
+      }
       if (lseen[out.id]) out.id = out.id + '_' + uid();
       lseen[out.id] = 1;
       return out;
@@ -1260,10 +1266,13 @@ var logTypeEmojis = document.getElementById('logtype-emojis');
 var logTypeEditing = false;
 var logTypeEmoji = '📝';
 
-function logMeta(t) {
+function logMeta(t, lg) {
   if (t === 'custom') {
     var c = data.settings.logCustom || { name: '随记', emoji: '📝' };
-    return { cls: 'custom', label: c.emoji + ' ' + c.name };
+    // 优先用条目里定格的图标/名字；P3.9 之前记的没有快照，退回当前配置
+    var em = (lg && lg.emoji) || c.emoji;
+    var lb = (lg && lg.label) || c.name;
+    return { cls: 'custom', label: em + ' ' + lb };
   }
   return t === 'review'
     ? { cls: 'review', label: '🌱 复盘' }
@@ -1305,7 +1314,7 @@ function renderLog() {
     return;
   }
   list.forEach(function (lg) {
-    var meta = logMeta(lg.type);
+    var meta = logMeta(lg.type, lg);
     var li = el('li', 'row log-row');
     li.appendChild(el('span', 'log-badge ' + meta.cls, meta.label));
     var body = el('div', 'log-body');
@@ -1409,12 +1418,19 @@ logForm.addEventListener('submit', function (e) {
   var key = viewKey();
   if (!data.logs[key]) data.logs[key] = [];
   if (data.logs[key].length >= 100) { toast('这天的小记已经记满 100 条'); return; }
-  data.logs[key].push({
+  var entry = {
     id: 'lg' + Date.now().toString(36) + Math.random().toString(36).slice(2, 4),
     type: logType,
     text: text,
     createdAt: iso()
-  });
+  };
+  // 自定义分类：把当前的图标和名字写进条目，之后改类型不影响这条
+  if (logType === 'custom') {
+    var lcNow = data.settings.logCustom || { name: '随记', emoji: '📝' };
+    entry.emoji = lcNow.emoji;
+    entry.label = lcNow.name;
+  }
+  data.logs[key].push(entry);
   saveData();
   logInput.value = '';
   renderLog();
