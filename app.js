@@ -1,4 +1,4 @@
-/* 微记 · 正式版 P3.9.1
+/* 微记 · 正式版 P3.10
  * 渲染管线沿用已验证的原型 v0.2（见 _proto/ 快照），在其上完成 P1/P2：
  *   - 数据层重构为 HANDOFF §三 的 v2 模型（version / granularity / duration /
  *     pool + shifts + rotation 占位），遵守五条不变量：
@@ -34,6 +34,7 @@
  *   - P3.8.2：底栏重排 —— 「小记 N」升为 13px 胶囊并移到粒度切换同排，「回到现在」缩为 12px
  *   - P3.9：小记第三个分类「＋ 自定义」—— 单类型，4 字名 + 表情，点已选胶囊改名
  *   - P3.9.1：自定义小记的图标/名字记录时定格 —— 改类型只影响新条目，旧条目不回头改写
+ *   - P3.10：小记左滑删除 —— 行内容左移露出「删除」，纵向滚动不拦截，一次只展开一行
  */
 (function () {
 'use strict';
@@ -1280,6 +1281,71 @@ function logMeta(t, lg) {
 }
 function logCount(key) { var a = data.logs[key]; return a ? a.length : 0; }
 
+/* ===== 小记左滑删除 =====
+ * 拖动内容层 .log-slide 向左，露出右侧固定的「删除」；同一时间只允许一行展开。
+ * 纵向滑动不拦截（touch-action: pan-y），横向超过 6px 才判定为滑动。
+ */
+var LOG_SWIPE_W = 76;
+var openLogRow = null;
+var lastLogDragAt = 0;
+
+function setLogSlide(row, x, animate) {
+  var s = row.querySelector('.log-slide');
+  if (!s) return;
+  s.style.transition = animate ? 'transform .18s ease' : 'none';
+  s.style.transform = 'translateX(' + x + 'px)';
+  if (x < 0) row.classList.add('swiped');
+  else row.classList.remove('swiped');
+}
+function closeLogSwipe(except) {
+  if (openLogRow && openLogRow !== except) {
+    setLogSlide(openLogRow, 0, true);
+    openLogRow = null;
+  }
+}
+function setupLogSwipe(li, slide) {
+  var sx = 0, sy = 0, base = 0, cur = 0, dragging = false, decided = false, moved = false;
+
+  li.addEventListener('pointerdown', function (e) {
+    if (e.pointerType === 'mouse' && e.button !== 0) return;
+    closeLogSwipe(li);
+    sx = e.clientX; sy = e.clientY;
+    base = li.classList.contains('swiped') ? -LOG_SWIPE_W : 0;
+    cur = base; dragging = true; decided = false; moved = false;
+    slide.style.transition = 'none';
+    try { li.setPointerCapture(e.pointerId); } catch (err) {}
+  });
+
+  li.addEventListener('pointermove', function (e) {
+    if (!dragging) return;
+    var mx = e.clientX - sx, my = e.clientY - sy;
+    if (!decided) {
+      if (Math.abs(mx) < 6 && Math.abs(my) < 6) return;
+      if (Math.abs(my) > Math.abs(mx)) { dragging = false; return; }   // 纵向：交给列表滚动
+      decided = true;
+    }
+    moved = true;
+    cur = Math.max(-LOG_SWIPE_W, Math.min(0, base + mx));
+    slide.style.transform = 'translateX(' + cur + 'px)';
+  });
+
+  function finish() {
+    if (!dragging) return;
+    dragging = false;
+    if (moved) {
+      lastLogDragAt = Date.now();
+      var open = cur <= -LOG_SWIPE_W / 2;
+      setLogSlide(li, open ? -LOG_SWIPE_W : 0, true);
+      openLogRow = open ? li : null;
+    } else if (li.classList.contains('swiped')) {
+      setLogSlide(li, 0, true);
+      openLogRow = null;
+    }
+  }
+  li.addEventListener('pointerup', finish);
+  li.addEventListener('pointercancel', finish);
+}
+
 function renderLogTabs() {
   logTabs.innerHTML = '';
   function add(t, label) {
@@ -1303,11 +1369,14 @@ function renderLog() {
   var key = viewKey();
   if (logType === 'custom' && !data.settings.logCustom) logType = 'highlight';
   renderLogTabs();
-  document.getElementById('log-sub').textContent = fmtDay(key) + ' · ' + shiftOf(key).name;
+  var lcount = logCount(key);
+  document.getElementById('log-sub').textContent =
+    fmtDay(key) + ' · ' + shiftOf(key).name + (lcount ? ' · 左滑删除' : '');
   logInput.placeholder = logType === 'review' ? '哪里可以更好一点…'
     : (logType === 'custom' ? '随手记一句…' : '今天有什么值得记住的…');
 
   logList.innerHTML = '';
+  openLogRow = null;
   var list = data.logs[key] || [];
   if (!list.length) {
     logList.appendChild(el('li', 'empty-row', '还没有小记，记一句也算数'));
@@ -1316,18 +1385,21 @@ function renderLog() {
   list.forEach(function (lg) {
     var meta = logMeta(lg.type, lg);
     var li = el('li', 'row log-row');
-    li.appendChild(el('span', 'log-badge ' + meta.cls, meta.label));
+    var slide = el('div', 'log-slide');
+    slide.appendChild(el('span', 'log-badge ' + meta.cls, meta.label));
     var body = el('div', 'log-body');
     body.appendChild(el('div', 'log-text', lg.text));
     var t = new Date(lg.createdAt);
     var clock = isNaN(t.getTime()) ? '' : pad(t.getHours()) + ':' + pad(t.getMinutes());
     body.appendChild(el('div', 'log-time', clock ? clock + ' 记录' : '记录'));
-    li.appendChild(body);
+    slide.appendChild(body);
+    li.appendChild(slide);
 
-    var x = el('button', 'log-del', '✕');
+    var x = el('button', 'log-del', '删除');
     x.type = 'button';
     x.setAttribute('aria-label', '删除这条小记');
     x.addEventListener('click', function () {
+      if (Date.now() - lastLogDragAt < 350) return;   // 刚拖完的那一下不算点击
       confirmBox('删除小记', '删除「' + lg.text.slice(0, 20) + '」？只删这条记录。', '删除', function () {
         data.logs[key] = (data.logs[key] || []).filter(function (o) { return o.id !== lg.id; });
         if (!data.logs[key].length) delete data.logs[key];
@@ -1339,6 +1411,7 @@ function renderLog() {
         haptic();
       }, logSheet);
     });
+    setupLogSwipe(li, slide);
     li.appendChild(x);
     logList.appendChild(li);
   });
