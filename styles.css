@@ -578,10 +578,53 @@ body.horiz .hint {
 }
 .log-badge.highlight { color: #a8c8ff; border-color: #3a5a9a; background: rgba(76,141,255,.1); }
 .log-badge.review { color: #8fe3b3; border-color: #2f7f52; background: rgba(53,194,107,.1); }
+.log-badge.custom { color: #f2d79a; border-color: #6b5a2f; background: rgba(240,180,60,.1); }
+.log-tabs button.active[data-type="custom"] { border-color: #6b5a2f; background: rgba(240,180,60,.14); color: #f2d79a; }
+.log-tabs button[data-type="custom-new"] { color: #8fb2ff; border-style: dashed; }
 .log-body { flex: 1; min-width: 0; }
 .log-text { font-size: 13px; line-height: 1.45; word-break: break-word; white-space: pre-wrap; }
 .log-time { font-size: 11px; color: #6f7b92; margin-top: 2px; font-variant-numeric: tabular-nums; }
 .log-del { flex: none; color: var(--muted); font-size: 13px; padding: 3px 5px; }
+
+/* 小记类型弹窗 */
+.modal {
+  position: fixed; inset: 0; z-index: 60;
+  display: flex; align-items: center; justify-content: center;
+  padding: 18px;
+  background: rgba(4, 7, 14, .62);
+}
+.modal[hidden] { display: none; }
+.modal-card {
+  width: 100%; max-width: 340px;
+  padding: 18px;
+  border-radius: 16px;
+  border: 1px solid var(--line);
+  background: var(--panel);
+}
+.modal-title { font-size: 16px; font-weight: 600; margin-bottom: 6px; }
+#logtype-name {
+  width: 100%;
+  margin-top: 12px;
+  padding: 11px 12px;
+  border-radius: 11px;
+  border: 1px solid var(--line);
+  background: var(--panel-2);
+  font-size: 15px;
+  outline: none;
+}
+#logtype-name:focus { border-color: #3c5b96; }
+.emoji-row { display: flex; gap: 8px; margin-top: 12px; }
+.emoji-row button {
+  flex: 1;
+  height: 42px;
+  border-radius: 12px;
+  border: 1px solid var(--line);
+  background: var(--panel-2);
+  font-size: 20px;
+}
+.emoji-row button.on { border-color: #3c5b96; background: rgba(76,141,255,.16); }
+.modal-actions { display: flex; justify-content: flex-end; gap: 10px; margin-top: 16px; }
+.modal-actions button { padding: 9px 16px; border-radius: 10px; font-size: 14px; }
 
 /* 设置表单 */
 .sheet-body { flex: 1; min-height: 0; overflow-y: auto; overscroll-behavior: contain; margin: 0 -4px; padding: 0 4px; }

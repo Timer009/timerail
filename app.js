@@ -1,4 +1,4 @@
-/* 微记 · 正式版 P3.8.2
+/* 微记 · 正式版 P3.9
  * 渲染管线沿用已验证的原型 v0.2（见 _proto/ 快照），在其上完成 P1/P2：
  *   - 数据层重构为 HANDOFF §三 的 v2 模型（version / granularity / duration /
  *     pool + shifts + rotation 占位），遵守五条不变量：
@@ -32,6 +32,7 @@
  *   - P3.8.1：安装入口常驻 —— 不再依赖 beforeinstallprompt；已装显示「已安装」，
  *           拿不到 prompt 时给浏览器菜单引导；manifest 加版本查询串强制刷新
  *   - P3.8.2：底栏重排 —— 「小记 N」升为 13px 胶囊并移到粒度切换同排，「回到现在」缩为 12px
+ *   - P3.9：小记第三个分类「＋ 自定义」—— 单类型，4 字名 + 表情，点已选胶囊改名，历史条目跟随
  */
 (function () {
 'use strict';
@@ -74,7 +75,7 @@ var fakeNow = null;   // 调试用：把"现在"钉在某个时刻，便于截�
 function defaultData() {
   return {
     version: 2,
-    settings: { granularity: 60, dayStart: 0, shiftName: '常规日', onboarded: false, trackStyle: 'wave', orientation: 'v' },
+    settings: { granularity: 60, dayStart: 0, shiftName: '常规日', onboarded: false, trackStyle: 'wave', orientation: 'v', logCustom: null },
     shifts: {},                                             // P3：班次模板
     rotation: { cycle: [], anchorDate: '', active: false }, // P3：轮转规则
     days: {},
@@ -83,6 +84,7 @@ function defaultData() {
   };
 }
 function snapG(v) { v = +v; return (v === 30 || v === 60 || v === 120) ? v : 60; }
+var LOG_EMOJIS = ['✨', '🌱', '📝', '💡', '🎯', '🧩'];
 function snapStart(v) { v = +v; return (v >= 0 && v < 1440) ? v : 0; }
 function snapStatus(v) { return ['todo', 'doing', 'done', 'missed', 'canceled'].indexOf(v) >= 0 ? v : 'todo'; }
 
@@ -141,8 +143,20 @@ function normalize(d) {
     shiftName: typeof s.shiftName === 'string' ? s.shiftName.slice(0, 10) : '常规日',
     onboarded: !!s.onboarded,
     trackStyle: snapStyle(s.trackStyle),
-    orientation: snapOrient(s.orientation)
+    orientation: snapOrient(s.orientation),
+    logCustom: null
   };
+  // 自定义小记类型：最多 4 字，表情必须在白名单里；没有名称视为未启用
+  var lc = s.logCustom;
+  if (lc && typeof lc === 'object') {
+    var lname = typeof lc.name === 'string' ? lc.name.trim().slice(0, 4) : '';
+    if (lname) {
+      d.settings.logCustom = {
+        name: lname,
+        emoji: LOG_EMOJIS.indexOf(lc.emoji) >= 0 ? lc.emoji : '📝'
+      };
+    }
+  }
   if (!d.shifts || typeof d.shifts !== 'object') d.shifts = {};
   // 班次模板：name 非空、dayStart 0–1439、duration 60–1440
   var shsrc = d.shifts, shifts = {};
@@ -185,9 +199,11 @@ function normalize(d) {
       if (!l || typeof l !== 'object') return null;
       var text = typeof l.text === 'string' ? l.text.trim() : '';
       if (!text) return null;
+      var lt = l.type === 'issue' ? 'review' : (l.type === 'handover' ? 'highlight' : l.type);
+      if (lt !== 'review' && lt !== 'custom') lt = 'highlight';
       var out = {
         id: typeof l.id === 'string' && l.id ? l.id : 'lg' + uid(),
-        type: (l.type === 'review' || l.type === 'issue') ? 'review' : 'highlight',
+        type: lt,
         text: text.slice(0, 80),
         createdAt: typeof l.createdAt === 'string' ? l.createdAt : iso()
       };
@@ -1231,21 +1247,56 @@ function dropFromPool(p) {
     }, poolSheet);
 }
 
-/* ===== 今日小记（✨ 今日高光 / 🌱 今日复盘） =====
+/* ===== 今日小记（✨ 高光 / 🌱 复盘 / 自定义分类） =====
  * 归属与事项一致：按班次日（viewKey）分组，夜班 00:30 记的是前一天那一班。
- * logs: { "<dateKey>": [{ id, type: 'highlight'|'review', text, createdAt }] }
+ * logs: { "<dateKey>": [{ id, type: 'highlight'|'review'|'custom', text, createdAt }] }
  * P3.6：旧类型 handover→highlight、issue→review（normalize 内迁移）
  */
 var logType = 'highlight';
+var logTypeModal = document.getElementById('logtype');
+var logTypeTitle = document.getElementById('logtype-title');
+var logTypeName = document.getElementById('logtype-name');
+var logTypeEmojis = document.getElementById('logtype-emojis');
+var logTypeEditing = false;
+var logTypeEmoji = '📝';
+
+function logMeta(t) {
+  if (t === 'custom') {
+    var c = data.settings.logCustom || { name: '随记', emoji: '📝' };
+    return { cls: 'custom', label: c.emoji + ' ' + c.name };
+  }
+  return t === 'review'
+    ? { cls: 'review', label: '🌱 复盘' }
+    : { cls: 'highlight', label: '✨ 高光' };
+}
 function logCount(key) { var a = data.logs[key]; return a ? a.length : 0; }
+
+function renderLogTabs() {
+  logTabs.innerHTML = '';
+  function add(t, label) {
+    var b = document.createElement('button');
+    b.type = 'button';
+    b.dataset.type = t;
+    b.textContent = label;
+    if (t === logType) b.className = 'active';
+    logTabs.appendChild(b);
+  }
+  add('highlight', '✨ 今日高光');
+  add('review', '🌱 今日复盘');
+  if (data.settings.logCustom) {
+    add('custom', data.settings.logCustom.emoji + ' ' + data.settings.logCustom.name);
+  } else {
+    add('custom-new', '＋ 自定义');
+  }
+}
 
 function renderLog() {
   var key = viewKey();
+  if (logType === 'custom' && !data.settings.logCustom) logType = 'highlight';
+  renderLogTabs();
   document.getElementById('log-sub').textContent = fmtDay(key) + ' · ' + shiftOf(key).name;
-  Array.prototype.forEach.call(logTabs.children, function (b) {
-    b.classList.toggle('active', b.dataset.type === logType);
-  });
-  logInput.placeholder = logType === 'review' ? '哪里可以更好一点…' : '今天有什么值得记住的…';
+  logInput.placeholder = logType === 'review' ? '哪里可以更好一点…'
+    : (logType === 'custom' ? '随手记一句…' : '今天有什么值得记住的…');
 
   logList.innerHTML = '';
   var list = data.logs[key] || [];
@@ -1254,8 +1305,9 @@ function renderLog() {
     return;
   }
   list.forEach(function (lg) {
+    var meta = logMeta(lg.type);
     var li = el('li', 'row log-row');
-    li.appendChild(el('span', 'log-badge ' + lg.type, lg.type === 'review' ? '🌱 复盘' : '✨ 高光'));
+    li.appendChild(el('span', 'log-badge ' + meta.cls, meta.label));
     var body = el('div', 'log-body');
     body.appendChild(el('div', 'log-text', lg.text));
     var t = new Date(lg.createdAt);
@@ -1289,12 +1341,65 @@ function openLog() {
   logList.scrollTop = logList.scrollHeight;
 }
 
+function renderEmojiRow() {
+  logTypeEmojis.innerHTML = '';
+  LOG_EMOJIS.forEach(function (em) {
+    var b = document.createElement('button');
+    b.type = 'button';
+    b.dataset.emoji = em;
+    b.textContent = em;
+    if (em === logTypeEmoji) b.className = 'on';
+    b.setAttribute('aria-label', '表情 ' + em);
+    logTypeEmojis.appendChild(b);
+  });
+}
+function openLogTypeDialog(editing) {
+  logTypeEditing = !!editing;
+  var c = data.settings.logCustom;
+  logTypeTitle.textContent = logTypeEditing ? '修改小记类型' : '新建小记类型';
+  logTypeName.value = c ? c.name : '随记';
+  logTypeEmoji = c ? c.emoji : '📝';
+  renderEmojiRow();
+  logTypeModal.hidden = false;
+  setTimeout(function () { logTypeName.focus(); logTypeName.select(); }, 60);
+}
+function closeLogTypeDialog() { logTypeModal.hidden = true; }
+function saveLogType() {
+  var name = logTypeName.value.trim().slice(0, 4) || '随记';
+  data.settings.logCustom = { name: name, emoji: logTypeEmoji };
+  saveData();
+  logType = 'custom';
+  closeLogTypeDialog();
+  renderLog();
+  updateHeader();
+  logInput.focus();
+  toast(logTypeEditing ? '已更新小记类型' : '已添加「' + name + '」');
+  haptic();
+}
+
 logTabs.addEventListener('click', function (e) {
   var b = e.target.closest('button');
   if (!b || !b.dataset.type) return;
-  logType = b.dataset.type === 'review' ? 'review' : 'highlight';
+  if (b.dataset.type === 'custom-new') { openLogTypeDialog(false); return; }
+  if (b.dataset.type === 'custom' && logType === 'custom') { openLogTypeDialog(true); return; }
+  logType = (b.dataset.type === 'review' || b.dataset.type === 'custom') ? b.dataset.type : 'highlight';
   renderLog();
   logInput.focus();
+});
+
+logTypeEmojis.addEventListener('click', function (e) {
+  var b = e.target.closest('button');
+  if (!b || !b.dataset.emoji) return;
+  logTypeEmoji = b.dataset.emoji;
+  renderEmojiRow();
+});
+document.getElementById('logtype-cancel').addEventListener('click', closeLogTypeDialog);
+document.getElementById('logtype-save').addEventListener('click', saveLogType);
+logTypeModal.addEventListener('click', function (e) {
+  if (e.target === logTypeModal) closeLogTypeDialog();
+});
+logTypeName.addEventListener('keydown', function (e) {
+  if (e.key === 'Enter') { e.preventDefault(); saveLogType(); }
 });
 
 logForm.addEventListener('submit', function (e) {
@@ -1625,6 +1730,7 @@ document.getElementById('log-close').addEventListener('click', hideSheet);
 backdrop.addEventListener('click', hideSheet);
 document.addEventListener('keydown', function (e) {
   if (e.key !== 'Escape') return;
+  if (!logTypeModal.hidden) { closeLogTypeDialog(); return; }
   if (!onboardEl.hidden) { closeOnboarding(true); return; }
   hideSheet();
 });

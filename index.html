@@ -10,10 +10,10 @@
 <meta name="application-name" content="微记">
 <meta name="apple-mobile-web-app-title" content="微记">
 <title>微记</title>
-<link rel="manifest" href="manifest.webmanifest?v=p3.8.2">
+<link rel="manifest" href="manifest.webmanifest?v=p3.9">
 <link rel="icon" type="image/png" sizes="192x192" href="icon-192.png">
 <link rel="apple-touch-icon" href="apple-touch-icon.png">
-<link rel="stylesheet" href="styles.css?v=p3.8.2">
+<link rel="stylesheet" href="styles.css?v=p3.9">
 </head>
 <body>
 
@@ -123,6 +123,20 @@
   </form>
 </section>
 
+<!-- 新建 / 修改自定义小记类型 -->
+<div class="modal" id="logtype" hidden>
+  <div class="modal-card" role="dialog" aria-modal="true" aria-labelledby="logtype-title">
+    <div class="modal-title" id="logtype-title">新建小记类型</div>
+    <div class="field-hint">起个短名字，配一个表情；只作分类，不影响已有小记。</div>
+    <input id="logtype-name" type="text" maxlength="4" placeholder="如：随记" autocomplete="off">
+    <div class="emoji-row" id="logtype-emojis"></div>
+    <div class="modal-actions">
+      <button type="button" class="ghost" id="logtype-cancel">取消</button>
+      <button type="button" class="primary" id="logtype-save">保存</button>
+    </div>
+  </div>
+</div>
+
 <!-- 设置 -->
 <section class="sheet" id="settings" aria-hidden="true">
   <div class="sheet-head">
@@ -223,7 +237,7 @@
       <button type="button" class="ghost danger" id="reset">清空全部数据</button>
     </div>
 
-    <div class="note">数据仅保存在本设备浏览器中 · 版本 P3.8.2 (2026-11-15)</div>
+    <div class="note">数据仅保存在本设备浏览器中 · 版本 P3.9 (2026-11-15)</div>
   </div>
 </section>
 
@@ -245,6 +259,6 @@
 </div>
 
 <div id="toast"></div>
-<script src="app.js?v=p3.8.2"></script>
+<script src="app.js?v=p3.9"></script>
 </body>
 </html>
