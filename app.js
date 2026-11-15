@@ -25,6 +25,8 @@
  *   - P3.5：表情修正 —— 一个时段全部完成就显示 🎉（原先「时段已过」会显示 👍）
  *   - P3.6：班次日志改为「今日小记」——类型 highlight(✨今日高光) / review(🌱今日复盘)，
  *           旧值 handover→highlight、issue→review 在 normalize 迁移
+ *   - P3.7：设置页通用化 —— 「日程名称 / 日程模板 / 按天轮换」取代班次说法，起点增加自定义，
+ *           模板与轮换收进默认折叠的「进阶」区
  */
 (function () {
 'use strict';
@@ -413,6 +415,10 @@ var rotCycleEl = document.getElementById('rot-cycle');
 var rotAnchor = document.getElementById('rot-anchor');
 var rotToggle = document.getElementById('rot-toggle');
 var rotHint = document.getElementById('rot-hint');
+var startCustom = document.getElementById('start-custom');
+var advToggle = document.getElementById('adv-toggle');
+var advBody = document.getElementById('adv-body');
+var advSum = document.getElementById('adv-sum');
 var logSheet = document.getElementById('log-sheet');
 var logTabs = document.getElementById('log-tabs');
 var logList = document.getElementById('log-list');
@@ -800,6 +806,32 @@ function plannedHours() {
   return (m / 60).toFixed(1).replace(/\.0$/, '');
 }
 
+/* 起点四选：00:00 / 06:00 / 08:00 / 自定义（自定义时露出时间输入） */
+var startCustomMode = false;
+function isPresetStart(v) { return v === 0 || v === 360 || v === 480; }
+function syncStartUI() {
+  var rot = rotationOn();
+  var cur = cfg().dayStart;
+  var custom = startCustomMode || !isPresetStart(cur);
+  Array.prototype.forEach.call(document.querySelectorAll('#startseg button'), function (b) {
+    var key = b.dataset.start;
+    b.classList.toggle('active', !rot && (key === 'custom' ? custom : (!custom && +key === cur)));
+    b.disabled = rot;
+  });
+  startCustom.hidden = rot || !custom;
+  startCustom.disabled = rot;
+  if (!rot) startCustom.value = fmt(cur);
+  document.getElementById('start-hint').textContent = rot
+    ? '轮换启用中，起点由日程模板决定'
+    : '睡醒算新的一天；跨零点作息可选 20:00';
+}
+
+/* 进阶区收起时的一行摘要 */
+function updateAdvSum() {
+  var n = Object.keys(data.shifts).length;
+  advSum.textContent = '已存 ' + n + ' 套日程 · ' + (rotationOn() ? '轮换已启用' : '未启用轮换');
+}
+
 function updateHeader() {
   var d = view.date;
   var week = ['周日', '周一', '周二', '周三', '周四', '周五', '周六'][d.getDay()];
@@ -809,7 +841,7 @@ function updateHeader() {
     rel + (d.getMonth() + 1) + '月' + d.getDate() + '日 ' + week;
 
   var rot = rotationOn();
-  var sub = (rot ? '轮转 · ' : '') + shiftOf(viewKey()).name;
+  var sub = (rot ? '轮换 · ' : '') + shiftOf(viewKey()).name;
   if (isToday()) sub += ' · 现在 ' + fmt(nowMin());
   else sub += viewKey() < todayKey() ? ' · 历史' : ' · 未来';
   document.getElementById('sub-label').textContent = sub;
@@ -826,11 +858,8 @@ function updateHeader() {
   Array.prototype.forEach.call(document.querySelectorAll('#gseg button'), function (b) {
     b.classList.toggle('active', +b.dataset.g === cfg().granularity);
   });
-  // 轮转启用时起点由模板决定，手动按钮置灰
-  Array.prototype.forEach.call(document.querySelectorAll('#startseg button'), function (b) {
-    b.classList.toggle('active', !rot && +b.dataset.start === cfg().dayStart);
-    b.disabled = rot;
-  });
+  // 轮换启用时起点由模板决定，手动按钮置灰
+  syncStartUI();
   Array.prototype.forEach.call(document.querySelectorAll('#styleseg button'), function (b) {
     b.classList.toggle('active', b.dataset.style === cfg().trackStyle);
   });
@@ -1329,7 +1358,7 @@ function renderSettings() {
   // 模板列表
   tplList.innerHTML = '';
   var ids = Object.keys(data.shifts);
-  if (!ids.length) tplList.appendChild(el('li', 'empty-row', '还没有模板 · 下面新建一个'));
+  if (!ids.length) tplList.appendChild(el('li', 'empty-row', '还没有模板 · 下面新建一套'));
   ids.forEach(function (id) {
     var t = data.shifts[id];
     var li = el('li', 'row tpl-row');
@@ -1348,7 +1377,7 @@ function renderSettings() {
     more.setAttribute('aria-label', '模板操作');
     more.addEventListener('click', function () {
       choose('「' + t.name + '」', [
-        { v: 'use', t: '套用为当前班次' },
+        { v: 'use', t: '套用为当前日程' },
         { v: 'del', t: '删除模板', danger: true }
       ], function (v) {
         if (v === 'use') { applyShift(id); return; }
@@ -1381,7 +1410,7 @@ function renderSettings() {
     tplList.appendChild(li);
   });
 
-  // 轮转周期
+  // 按天轮换
   rotCycleEl.innerHTML = '';
   if (!data.rotation.cycle.length) {
     rotCycleEl.appendChild(el('span', 'rot-empty', '周期还是空的'));
@@ -1403,11 +1432,12 @@ function renderSettings() {
   }
   if (document.activeElement !== rotAnchor) rotAnchor.value = data.rotation.anchorDate || '';
   var on = rotationOn();
-  rotToggle.textContent = on ? '停用轮转' : '启用轮转';
+  rotToggle.textContent = on ? '停用轮换' : '启用轮换';
   rotToggle.classList.toggle('on', on);
   rotHint.textContent = on
-    ? '轮转已启用：每天按周期套用模板，「一天的起点」随日期变化'
-    : '启用后从锚定日期起，按周期逐日套用模板；不启用时用上面的手动班次';
+    ? '轮换已启用：每天按周期套用日程模板，「一天的起点」随日期变化'
+    : '启用后从起始日期起，按周期逐天套用日程模板';
+  updateAdvSum();
 }
 
 /* 轮转改动后：守住合法性，回到今天，重绘轨道与设置 */
@@ -1434,7 +1464,7 @@ function applyShift(id) {
   scrollToNow(false);
   renderSettings();
   showSheet(settingsSheet);
-  toast(hadRot ? '已套用「' + t.name + '」，轮转已停用' : '已套用「' + t.name + '」');
+  toast(hadRot ? '已套用「' + t.name + '」，轮换已停用' : '已套用「' + t.name + '」');
   haptic();
 }
 
@@ -1479,14 +1509,14 @@ rotToggle.addEventListener('click', function () {
     render();
     scrollToNow(false);
     renderSettings();
-    toast('已停用轮转');
+    toast('已停用轮换');
     return;
   }
   if (!data.rotation.cycle.length) { toast('先在周期里加至少一天'); return; }
   if (!data.rotation.anchorDate) data.rotation.anchorDate = todayKey();
   data.rotation.active = true;
   afterRotChange();
-  toast('轮转已启用');
+  toast('轮换已启用');
   haptic();
 });
 
@@ -1638,15 +1668,39 @@ document.getElementById('styleseg').addEventListener('click', function (e) {
 document.getElementById('startseg').addEventListener('click', function (e) {
   var b = e.target.closest('button');
   if (!b || rotationOn()) return;
-  cfg().dayStart = +b.dataset.start;
-  if (cfg().dayStart > 0 && (!cfg().shiftName || cfg().shiftName === '常规日')) {
-    cfg().shiftName = cfg().dayStart >= 1200 ? '夜班' : '白班';
+  if (b.dataset.start === 'custom') {
+    startCustomMode = true;
+    syncStartUI();
+    startCustom.focus();
+    return;
   }
+  startCustomMode = false;
+  cfg().dayStart = +b.dataset.start;
   saveData();
   view.date = shiftDateOf(new Date());
   render();
   scrollToNow(true);
   renderSheet();
+});
+
+startCustom.addEventListener('change', function () {
+  if (rotationOn()) return;
+  var t = timeVal(startCustom.value);
+  if (t == null) { toast('时间格式不对'); return; }
+  startCustomMode = false;
+  cfg().dayStart = t;
+  saveData();
+  view.date = shiftDateOf(new Date());
+  render();
+  scrollToNow(true);
+  renderSheet();
+});
+
+advToggle.addEventListener('click', function () {
+  var open = advBody.hidden;
+  advBody.hidden = !open;
+  advToggle.setAttribute('aria-expanded', open ? 'true' : 'false');
+  advToggle.classList.toggle('open', open);
 });
 
 shiftInput.addEventListener('input', function () {
@@ -1658,7 +1712,7 @@ shiftInput.addEventListener('input', function () {
 });
 
 document.getElementById('reset').addEventListener('click', function () {
-  confirmBox('清空全部数据', '将删除所有日期的事项、班次模板与全部设置，且不可恢复。', '全部清空', function () {
+  confirmBox('清空全部数据', '将删除所有日期的事项、日程模板与全部设置，且不可恢复。', '全部清空', function () {
     data = defaultData();
     saveData();
     view.date = shiftDateOf(new Date());
