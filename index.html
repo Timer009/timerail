@@ -12,7 +12,7 @@
 <link rel="manifest" href="manifest.webmanifest">
 <link rel="icon" type="image/png" sizes="192x192" href="icon-192.png">
 <link rel="apple-touch-icon" href="apple-touch-icon.png">
-<link rel="stylesheet" href="styles.css?v=p3.5">
+<link rel="stylesheet" href="styles.css?v=p3.6">
 </head>
 <body>
 
@@ -47,7 +47,7 @@
     <span id="stat-plan">已规划 0h</span>
     <span class="linkwrap">
       <button type="button" class="pool-link" id="pool-link" hidden>顺延池 0</button>
-      <button type="button" class="log-link" id="log-link">日志</button>
+      <button type="button" class="log-link" id="log-link">小记</button>
     </span>
   </div>
   <div class="bar">
@@ -100,22 +100,22 @@
   <ul class="list" id="pool-list"></ul>
 </section>
 
-<!-- 班次日志 -->
+<!-- 今日小记 -->
 <section class="sheet" id="log-sheet" aria-hidden="true">
   <div class="sheet-head">
     <div>
-      <div class="sheet-title">班次日志</div>
+      <div class="sheet-title">今日小记</div>
       <div class="sub" id="log-sub">—</div>
     </div>
     <button class="icon" id="log-close" aria-label="关闭">✕</button>
   </div>
   <div class="log-tabs" id="log-tabs">
-    <button type="button" data-type="handover" class="active">交接</button>
-    <button type="button" data-type="issue">异常</button>
+    <button type="button" data-type="highlight" class="active">✨ 今日高光</button>
+    <button type="button" data-type="review">🌱 今日复盘</button>
   </div>
   <ul class="list" id="log-list"></ul>
   <form class="addbar" id="log-form">
-    <input id="log-input" type="text" maxlength="80" placeholder="交接事项 / 异常情况…" autocomplete="off">
+    <input id="log-input" type="text" maxlength="80" placeholder="今天有什么值得记住的…" autocomplete="off">
     <button class="primary" type="submit">记</button>
   </form>
 </section>
@@ -206,11 +206,11 @@
         <button type="button" class="ghost" id="import">导入备份</button>
         <input type="file" id="import-file" accept=".json,application/json" hidden>
       </div>
-      <div class="field-hint">备份包含所有日期、事项、顺延池、班次模板、轮转与日志；导入会覆盖本机数据，建议先导出。</div>
+      <div class="field-hint">备份包含所有日期、事项、顺延池、班次模板、轮转与小记；导入会覆盖本机数据，建议先导出。</div>
       <button type="button" class="ghost danger" id="reset">清空全部数据</button>
     </div>
 
-    <div class="note">数据仅保存在本设备浏览器中 · 版本 P3.5 (2026-11-15)</div>
+    <div class="note">数据仅保存在本设备浏览器中 · 版本 P3.6 (2026-11-15)</div>
   </div>
 </section>
 
@@ -232,6 +232,6 @@
 </div>
 
 <div id="toast"></div>
-<script src="app.js?v=p3.5"></script>
+<script src="app.js?v=p3.6"></script>
 </body>
 </html>

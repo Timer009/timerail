@@ -23,6 +23,8 @@
  *   - P3.4：PWA —— manifest + 图标 + service worker（外壳预缓存、导航网络优先、离线回落），
  *           设置页「安装到桌面」；仅在 https / localhost 下生效
  *   - P3.5：表情修正 —— 一个时段全部完成就显示 🎉（原先「时段已过」会显示 👍）
+ *   - P3.6：班次日志改为「今日小记」——类型 highlight(✨今日高光) / review(🌱今日复盘)，
+ *           旧值 handover→highlight、issue→review 在 normalize 迁移
  */
 (function () {
 'use strict';
@@ -70,7 +72,7 @@ function defaultData() {
     rotation: { cycle: [], anchorDate: '', active: false }, // P3：轮转规则
     days: {},
     pool: [],                                               // P2：顺延池
-    logs: {}                                                // P3.2：班次日志（按班次日归属）
+    logs: {}                                                // P3.6：今日小记（按班次日归属）
   };
 }
 function snapG(v) { v = +v; return (v === 30 || v === 60 || v === 120) ? v : 60; }
@@ -166,7 +168,8 @@ function normalize(d) {
     pseen[p.id] = 1;
     return true;
   });
-  // 班次日志：按班次日分组，空文本丢弃，单日最多留 100 条
+  // 今日小记：按班次日分组，空文本丢弃，单日最多留 100 条
+  // P3.6 迁移：旧类型 handover→highlight、issue→review
   if (!d.logs || typeof d.logs !== 'object' || Array.isArray(d.logs)) d.logs = {};
   Object.keys(d.logs).forEach(function (k) {
     if (!/^\d{4}-\d{2}-\d{2}$/.test(k) || !Array.isArray(d.logs[k])) { delete d.logs[k]; return; }
@@ -177,7 +180,7 @@ function normalize(d) {
       if (!text) return null;
       var out = {
         id: typeof l.id === 'string' && l.id ? l.id : 'lg' + uid(),
-        type: l.type === 'issue' ? 'issue' : 'handover',
+        type: (l.type === 'review' || l.type === 'issue') ? 'review' : 'highlight',
         text: text.slice(0, 80),
         createdAt: typeof l.createdAt === 'string' ? l.createdAt : iso()
       };
@@ -818,7 +821,7 @@ function updateHeader() {
   poolLink.hidden = !pn;
   poolLink.textContent = '顺延池 ' + pn;
   var ln = logCount(viewKey());
-  logLink.textContent = ln ? '日志 ' + ln : '日志';
+  logLink.textContent = ln ? '小记 ' + ln : '小记';
 
   Array.prototype.forEach.call(document.querySelectorAll('#gseg button'), function (b) {
     b.classList.toggle('active', +b.dataset.g === cfg().granularity);
@@ -1194,11 +1197,12 @@ function dropFromPool(p) {
     }, poolSheet);
 }
 
-/* ===== 班次日志（交接 / 异常） =====
+/* ===== 今日小记（✨ 今日高光 / 🌱 今日复盘） =====
  * 归属与事项一致：按班次日（viewKey）分组，夜班 00:30 记的是前一天那一班。
- * logs: { "<dateKey>": [{ id, type: 'handover'|'issue', text, createdAt }] }
+ * logs: { "<dateKey>": [{ id, type: 'highlight'|'review', text, createdAt }] }
+ * P3.6：旧类型 handover→highlight、issue→review（normalize 内迁移）
  */
-var logType = 'handover';
+var logType = 'highlight';
 function logCount(key) { var a = data.logs[key]; return a ? a.length : 0; }
 
 function renderLog() {
@@ -1207,17 +1211,17 @@ function renderLog() {
   Array.prototype.forEach.call(logTabs.children, function (b) {
     b.classList.toggle('active', b.dataset.type === logType);
   });
-  logInput.placeholder = logType === 'handover' ? '交接事项，如：3 号机待检修' : '异常情况，如：原料延迟 30 分钟';
+  logInput.placeholder = logType === 'review' ? '哪里可以更好一点…' : '今天有什么值得记住的…';
 
   logList.innerHTML = '';
   var list = data.logs[key] || [];
   if (!list.length) {
-    logList.appendChild(el('li', 'empty-row', '还没有日志 · 交接和异常都记在这里'));
+    logList.appendChild(el('li', 'empty-row', '还没有小记，记一句也算数'));
     return;
   }
   list.forEach(function (lg) {
     var li = el('li', 'row log-row');
-    li.appendChild(el('span', 'log-badge ' + lg.type, lg.type === 'issue' ? '异常' : '交接'));
+    li.appendChild(el('span', 'log-badge ' + lg.type, lg.type === 'review' ? '🌱 复盘' : '✨ 高光'));
     var body = el('div', 'log-body');
     body.appendChild(el('div', 'log-text', lg.text));
     var t = new Date(lg.createdAt);
@@ -1227,16 +1231,16 @@ function renderLog() {
 
     var x = el('button', 'log-del', '✕');
     x.type = 'button';
-    x.setAttribute('aria-label', '删除这条日志');
+    x.setAttribute('aria-label', '删除这条小记');
     x.addEventListener('click', function () {
-      confirmBox('删除日志', '删除「' + lg.text.slice(0, 20) + '」？只删这条记录。', '删除', function () {
+      confirmBox('删除小记', '删除「' + lg.text.slice(0, 20) + '」？只删这条记录。', '删除', function () {
         data.logs[key] = (data.logs[key] || []).filter(function (o) { return o.id !== lg.id; });
         if (!data.logs[key].length) delete data.logs[key];
         saveData();
         renderLog();
         updateHeader();
         showSheet(logSheet);
-        toast('已删除日志');
+        toast('已删除小记');
         haptic();
       }, logSheet);
     });
@@ -1254,7 +1258,7 @@ function openLog() {
 logTabs.addEventListener('click', function (e) {
   var b = e.target.closest('button');
   if (!b || !b.dataset.type) return;
-  logType = b.dataset.type === 'issue' ? 'issue' : 'handover';
+  logType = b.dataset.type === 'review' ? 'review' : 'highlight';
   renderLog();
   logInput.focus();
 });
@@ -1265,7 +1269,7 @@ logForm.addEventListener('submit', function (e) {
   if (!text) { logInput.focus(); return; }
   var key = viewKey();
   if (!data.logs[key]) data.logs[key] = [];
-  if (data.logs[key].length >= 100) { toast('这天的日志已经记满 100 条'); return; }
+  if (data.logs[key].length >= 100) { toast('这天的小记已经记满 100 条'); return; }
   data.logs[key].push({
     id: 'lg' + Date.now().toString(36) + Math.random().toString(36).slice(2, 4),
     type: logType,
@@ -1545,7 +1549,7 @@ importFile.addEventListener('change', function () {
     if (!next) { toast('不是有效的时间轨备份'); return; }
     var s = backupCounts(next);
     confirmBox('导入备份',
-      '将覆盖本机数据：' + s.days + ' 天 · ' + s.items + ' 条事项 · ' + s.logs + ' 条日志 · ' +
+      '将覆盖本机数据：' + s.days + ' 天 · ' + s.items + ' 条事项 · ' + s.logs + ' 条小记 · ' +
       s.shifts + ' 个模板 · 顺延池 ' + s.pool + ' 条。当前数据会被替换，不可撤销。',
       '覆盖导入', function () {
         data = next;

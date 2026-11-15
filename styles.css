@@ -550,7 +550,7 @@ body.horiz .hint {
 .opt .hint-text { font-size: 11px; color: var(--muted); }
 .opt.danger { color: #e2685f; }
 
-/* ===== 班次日志 ===== */
+/* ===== 今日小记 ===== */
 .log-tabs { display: flex; gap: 7px; padding-bottom: 10px; }
 .log-tabs button {
   padding: 5px 13px;
@@ -559,8 +559,8 @@ body.horiz .hint {
   font-size: 12px;
   color: var(--muted);
 }
-.log-tabs button.active[data-type="handover"] { border-color: #2f7f52; background: rgba(53,194,107,.14); color: #c9efd8; }
-.log-tabs button.active[data-type="issue"] { border-color: #7a5028; background: rgba(240,136,62,.14); color: #ffd2ab; }
+.log-tabs button.active[data-type="highlight"] { border-color: #3a5a9a; background: rgba(76,141,255,.14); color: #c9dcff; }
+.log-tabs button.active[data-type="review"] { border-color: #2f7f52; background: rgba(53,194,107,.14); color: #c9efd8; }
 .log-row { align-items: flex-start; gap: 8px; }
 .log-badge {
   flex: none;
@@ -570,8 +570,8 @@ body.horiz .hint {
   border: 1px solid;
   font-size: 11px;
 }
-.log-badge.handover { color: #8fe3b3; border-color: #2f7f52; background: rgba(53,194,107,.1); }
-.log-badge.issue { color: #ffc48c; border-color: #7a5028; background: rgba(240,136,62,.1); }
+.log-badge.highlight { color: #a8c8ff; border-color: #3a5a9a; background: rgba(76,141,255,.1); }
+.log-badge.review { color: #8fe3b3; border-color: #2f7f52; background: rgba(53,194,107,.1); }
 .log-body { flex: 1; min-width: 0; }
 .log-text { font-size: 13px; line-height: 1.45; word-break: break-word; white-space: pre-wrap; }
 .log-time { font-size: 11px; color: #6f7b92; margin-top: 2px; font-variant-numeric: tabular-nums; }
