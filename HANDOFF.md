@@ -52,7 +52,7 @@ timerail/
 - 图标（P3.8）：深底 `#0e131f` + 白色「微记」字标 + 轨道折线；`icon-192/512`、`apple-touch-icon`(180)、`icon-maskable-512` 同一母版，maskable 内容缩到 70% 安全区；字标字体自 P3.10.1 起为华文楷体（带轻微描边），生成脚本不入库
 - 小记（P3.9）：条目 `type` 为 `highlight / review / custom`；自定义只有一套，名称与表情存在 `settings.logCustom`（名称 ≤4 字、表情限白名单）；不要做「删除类型」
 - 备份提醒（P3.12）：`settings.lastExportAt` 由导出动作写入，normalize 校验；`renderBackupWarn()` 在 renderSettings 末尾调用，有数据且 ≥7 天（或从未导出）才亮，7 天内或无数据必须隐藏
-- iOS 发虚（P3.13.1）：顶栏禁用 `backdrop-filter`，用不透明 `var(--bg)`；iOS 上 backdrop-filter 会把含文字的条带栅格化并在缩放时拉伸，导致文字发虚，新增带文字条带一律不要用 backdrop-filter
+- iOS 发虚（P3.13.1 / P3.16）：**整个页面禁用 `backdrop-filter`**。iOS 上只要存在 backdrop-filter，就可能把整页（含顶栏日期文字）栅格化成低分辨率图层，放大回原尺寸就发虚。P3.16 已把底栏与引导遮罩的 backdrop-filter 一并删除，顶栏/底栏都用不透明底色（`var(--bg)` / `var(--bar-bg)`），引导只用 scrim。新增任何条带、弹层都不要用 backdrop-filter。
 - 日历选天（P3.13）：`#date-label` 点击 `openCal()`；`renderCal()` 42 格固定，dim=非本月、today=shiftDateOf 口径、sel=view.date、has=有事项或小记；跳转后 `render()+closeCal()+scrollToNow(true)`。`.titlewrap` 仍为 pointer-events:none，仅 `#date-label` 放开
 - 节日区间（P3.14）：`HOL_RANGES` = [名称, 起始日, 天数]，启动展开成 `HOLMAP`（{name,idx,total}）；顶栏显示「国庆假期 第3天」。区间为通常放假长度（元旦3/春节7/清明3/劳动5/端午3/中秋3/国庆7），**不含调休补班**；重叠时先声明先赢（2028 中秋在国庆内）。农历节日逐年录入，2029 起续表
 - 小记快照（P3.9.1）：`custom` 条目入库时写 `emoji / label` 定格当时的图标与名字，改类型只影响新条目；normalize 校验这两字段，缺失时退回当前配置
@@ -151,3 +151,10 @@ timerail/
 - 浅色验收必须在 390×844 下逐屏看：四种轨道 × 纵横、节点五态与呼吸圈、时间标签、chip、次日分隔与现在线、底栏、时段面板、顺延池、小记与自定义弹窗、设置全部区块、日历（今天/选中/绿点）、引导、存储失败告警条。
 - 浅色下原生日期/时间控件需要 `color-scheme: light`（已对 `.tpl-line` 与 `.rot-anchor` 覆盖）。
 - 版本三处同步照旧：`index.html` 的 `?v=`（manifest / css / js）、`sw.js` 的 CACHE 与 ASSETS、设置页版本注记。
+
+## 八、进阶区（P3.16 起）
+
+- 「进阶 · 多套日程与轮换」是可点卡片：`1px solid var(--line)`、`10px` 圆角、`10px 12px` 内边距、上下 `6px` 外边距、`min-height: 44px`，底色 `var(--panel)`。
+- 名称 `13px / 500 / var(--text)`，摘要 `12px / var(--muted)` 单行 `ellipsis`，箭头 `12px`；390 宽下摘要可以截断，名称不允许换行或溢出。
+- 展开态 `.adv-toggle.open`：边框与名称 `doing` 蓝、底色 `var(--blue-bg)`、箭头旋转；`aria-expanded` 必须同步。
+- 不要再把进阶区退回成无边框、无底色的 12px 灰字。
