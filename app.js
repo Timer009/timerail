@@ -1,4 +1,4 @@
-/* 时间轨 TimeRail · 正式版 P3.4
+/* 微记 · 正式版 P3.8
  * 渲染管线沿用已验证的原型 v0.2（见 _proto/ 快照），在其上完成 P1/P2：
  *   - 数据层重构为 HANDOFF §三 的 v2 模型（version / granularity / duration /
  *     pool + shifts + rotation 占位），遵守五条不变量：
@@ -27,6 +27,8 @@
  *           旧值 handover→highlight、issue→review 在 normalize 迁移
  *   - P3.7：设置页通用化 —— 「日程名称 / 日程模板 / 按天轮换」取代班次说法，起点增加自定义，
  *           模板与轮换收进默认折叠的「进阶」区
+ *   - P3.8：品牌改名「微记」—— 标题 / manifest / 桌面名 / 引导 / 备份文件名统一，
+ *           图标换成深底「微记」字标 + 轨道折线
  */
 (function () {
 'use strict';
@@ -1555,7 +1557,7 @@ document.getElementById('export').addEventListener('click', function () {
   var url = URL.createObjectURL(blob);
   var a = document.createElement('a');
   a.href = url;
-  a.download = 'timerail-backup-' + ymd(new Date()) + '.json';
+  a.download = '微记备份-' + ymd(new Date()) + '.json';
   document.body.appendChild(a);
   a.click();
   document.body.removeChild(a);
@@ -1576,7 +1578,7 @@ importFile.addEventListener('change', function () {
   var reader = new FileReader();
   reader.onload = function () {
     var next = parseBackup(String(reader.result || ''));
-    if (!next) { toast('不是有效的时间轨备份'); return; }
+    if (!next) { toast('不是有效的微记备份'); return; }
     var s = backupCounts(next);
     confirmBox('导入备份',
       '将覆盖本机数据：' + s.days + ' 天 · ' + s.items + ' 条事项 · ' + s.logs + ' 条小记 · ' +
@@ -1759,7 +1761,7 @@ function toast(msg) {
 /* ===== 3 步引导 ===== */
 var onboardEl = document.getElementById('onboard');
 var OB = [
-  { t: '一天，一条时间轨',
+  { t: '一天，一条微记',
     b: '曲线从这一天的起点铺开，每个节点是一段时间。点空白时段，就能加一件事。' },
   { t: '点圈打钩，一步完成',
     b: '点圆圈直接打钩；点事项右侧的「⋯」可以标为进行中、未完成、取消，还能改名和挪时段。' },

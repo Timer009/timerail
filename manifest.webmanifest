@@ -1,7 +1,7 @@
 {
-  "name": "时间轨 TimeRail",
-  "short_name": "时间轨",
-  "description": "一天一条时间轨：按时段记录、打钩完成、换班留痕，数据只存在本机。",
+  "name": "微记",
+  "short_name": "微记",
+  "description": "一天一条微记：按时段记录、打钩完成，数据只存在本机。",
   "lang": "zh-CN",
   "id": "./",
   "start_url": "./index.html",
