@@ -1,4 +1,4 @@
-/* 微记 · 正式版 P3.10.1
+/* 微记 · 正式版 P3.10.2
  * 渲染管线沿用已验证的原型 v0.2（见 _proto/ 快照），在其上完成 P1/P2：
  *   - 数据层重构为 HANDOFF §三 的 v2 模型（version / granularity / duration /
  *     pool + shifts + rotation 占位），遵守五条不变量：
@@ -35,7 +35,7 @@
  *   - P3.9：小记第三个分类「＋ 自定义」—— 单类型，4 字名 + 表情，点已选胶囊改名
  *   - P3.9.1：自定义小记的图标/名字记录时定格 —— 改类型只影响新条目，旧条目不回头改写
  *   - P3.10：小记左滑删除 —— 行内容左移露出「删除」，纵向滚动不拦截，一次只展开一行
- *   - P3.10.1：图标字标换楷体（华文楷体 + 轻微描边补足笔画），构图与配色不变
+ *   - P3.10.1：图标字标试换楷体（已被 P3.10.2 回退）\n *   - P3.10.2：图标回退为黑体；左滑删除的「删除」改为默认 opacity 0 + 不吃点击，只在左滑时出现
  */
 (function () {
 'use strict';
@@ -1297,6 +1297,15 @@ function setLogSlide(row, x, animate) {
   s.style.transform = 'translateX(' + x + 'px)';
   if (x < 0) row.classList.add('swiped');
   else row.classList.remove('swiped');
+  syncLogDel(row, x);
+}
+/* 删除按钮只在内容层让开时出现：与底色无关，不会被「盖住」这件事连累 */
+function syncLogDel(row, x) {
+  var d = row.querySelector('.log-del');
+  if (!d) return;
+  var shown = x <= -8;
+  d.style.opacity = shown ? '1' : '0';
+  d.style.pointerEvents = shown ? 'auto' : 'none';
 }
 function closeLogSwipe(except) {
   if (openLogRow && openLogRow !== except) {
@@ -1328,6 +1337,7 @@ function setupLogSwipe(li, slide) {
     moved = true;
     cur = Math.max(-LOG_SWIPE_W, Math.min(0, base + mx));
     slide.style.transform = 'translateX(' + cur + 'px)';
+    syncLogDel(li, cur);
   });
 
   function finish() {
@@ -1399,6 +1409,9 @@ function renderLog() {
     var x = el('button', 'log-del', '删除');
     x.type = 'button';
     x.setAttribute('aria-label', '删除这条小记');
+    // 默认彻底隐藏：不透明度 + 不吃点击，避免任何底图差异导致「删除」露出
+    x.style.opacity = '0';
+    x.style.pointerEvents = 'none';
     x.addEventListener('click', function () {
       if (Date.now() - lastLogDragAt < 350) return;   // 刚拖完的那一下不算点击
       confirmBox('删除小记', '删除「' + lg.text.slice(0, 20) + '」？只删这条记录。', '删除', function () {
