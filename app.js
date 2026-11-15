@@ -1,4 +1,4 @@
-/* 微记 · 正式版 P3.12
+/* 微记 · 正式版 P3.13
  * 渲染管线沿用已验证的原型 v0.2（见 _proto/ 快照），在其上完成 P1/P2：
  *   - 数据层重构为 HANDOFF §三 的 v2 模型（version / granularity / duration /
  *     pool + shifts + rotation 占位），遵守五条不变量：
@@ -40,6 +40,7 @@
  *   - P3.10.3：左滑手势改用 touch 事件 + 延迟定向
  *   - P3.11：删除回归唯一入口 —— 每行常驻 ✕，点开确认框；去掉全部滑动手势与相关样式
  *   - P3.12：备份提醒（有数据且 7 天未导出时设置页提示）+ 顶栏日期后追加节日名（2026–2028 固定表）
+ *   - P3.13：日历选天 —— 点顶栏日期弹出月历，任意跳转，有记录的日子带小点
  */
 (function () {
 'use strict';
@@ -1773,6 +1774,68 @@ importFile.addEventListener('change', function () {
 /* ===== 事件 ===== */
 document.getElementById('prev').addEventListener('click', function () { shiftDay(-1); });
 document.getElementById('next').addEventListener('click', function () { shiftDay(1); });
+
+/* ===== 日历选天（P3.13）：点顶栏日期打开，任意跳转 ===== */
+var calEl = document.getElementById('cal');
+var calY = 0, calM = 0;
+
+function openCal() {
+  calY = view.date.getFullYear();
+  calM = view.date.getMonth();
+  renderCal();
+  calEl.hidden = false;
+}
+function closeCal() { calEl.hidden = true; }
+
+function renderCal() {
+  document.getElementById('cal-ym').textContent = calY + '年' + (calM + 1) + '月';
+  var grid = document.getElementById('cal-grid');
+  grid.innerHTML = '';
+  var first = new Date(calY, calM, 1);
+  var start = first.getDay();                 // 周日=0
+  var todayS = ymd(shiftDateOf(new Date()));  // 按班次口径的"今天"
+  var selS = ymd(view.date);
+  for (var i = 0; i < 42; i++) {
+    var d = new Date(calY, calM, 1 - start + i);
+    var ks = ymd(d);
+    var dd = data.days[ks];
+    var lg = data.logs[ks];
+    var b = el('button', 'cal-d');
+    b.type = 'button';
+    b.textContent = d.getDate();
+    if (d.getMonth() !== calM) b.className += ' dim';
+    if (ks === todayS) b.className += ' today';
+    if (ks === selS) b.className += ' sel';
+    if ((dd && dd.items.length) || (lg && lg.length)) b.className += ' has';
+    b.addEventListener('click', (function (dd2) {
+      return function () {
+        view.date = dd2;
+        render();
+        closeCal();
+        scrollToNow(true);
+      };
+    })(new Date(d.getFullYear(), d.getMonth(), d.getDate())));
+    grid.appendChild(b);
+  }
+}
+
+document.getElementById('date-label').addEventListener('click', openCal);
+document.getElementById('cal-prev').addEventListener('click', function () {
+  calM--; if (calM < 0) { calM = 11; calY--; }
+  renderCal();
+});
+document.getElementById('cal-next').addEventListener('click', function () {
+  calM++; if (calM > 11) { calM = 0; calY++; }
+  renderCal();
+});
+document.getElementById('cal-today').addEventListener('click', function () {
+  view.date = shiftDateOf(new Date());
+  render();
+  closeCal();
+  scrollToNow(true);
+});
+calEl.addEventListener('click', function (e) { if (e.target === calEl) closeCal(); });
+
 document.getElementById('go-now').addEventListener('click', function () {
   hideSheet();
   view.date = shiftDateOf(new Date());
@@ -1794,6 +1857,7 @@ backdrop.addEventListener('click', hideSheet);
 document.addEventListener('keydown', function (e) {
   if (e.key !== 'Escape') return;
   if (!logTypeModal.hidden) { closeLogTypeDialog(); return; }
+  if (!calEl.hidden) { closeCal(); return; }
   if (!onboardEl.hidden) { closeOnboarding(true); return; }
   hideSheet();
 });

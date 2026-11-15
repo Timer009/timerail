@@ -682,6 +682,49 @@ body.horiz .hint {
 }
 .note { padding-top: 14px; font-size: 11px; color: #6f7b92; line-height: 1.6; }
 
+/* ===== 日历选天（P3.13）===== */
+/* titlewrap 整体不吃事件，只放开日期标题本身 */
+#date-label { pointer-events: auto; cursor: pointer; }
+.cal-head {
+  display: flex; align-items: center; justify-content: space-between;
+  margin-bottom: 4px;
+}
+.cal-ym { font-size: 15px; font-weight: 600; letter-spacing: .3px; }
+.cal-head .icon { width: 34px; height: 34px; font-size: 20px; }
+.cal-week {
+  display: grid; grid-template-columns: repeat(7, 1fr);
+  margin: 6px 0 2px;
+  font-size: 11px; color: var(--muted); text-align: center;
+}
+.cal-grid {
+  display: grid; grid-template-columns: repeat(7, 1fr);
+  gap: 2px;
+  margin-top: 2px;
+}
+.cal-d {
+  position: relative;
+  height: 40px;
+  border-radius: 10px;
+  font-size: 13px;
+  color: var(--text);
+  font-variant-numeric: tabular-nums;
+  transition: background .15s;
+}
+.cal-d:active { background: var(--panel-2); }
+.cal-d.dim { color: #4d5872; }
+.cal-d.today { color: var(--doing); font-weight: 600; }
+.cal-d.sel { background: rgba(76,141,255,.16); color: #d3e2ff; font-weight: 600; }
+/* 有记录的日子：底部一枚小点 */
+.cal-d.has::after {
+  content: '';
+  position: absolute; left: 50%; bottom: 5px;
+  width: 4px; height: 4px; margin-left: -2px;
+  border-radius: 50%;
+  background: rgba(53,194,107,.75);
+}
+.cal-d.sel.has::after { background: #35c26b; }
+.cal-today { width: 100%; margin-top: 12px; padding: 9px 0; }
+
 /* 班次模板 */
 .tpl-list { list-style: none; margin-bottom: 6px; }
 .tpl-row { padding: 8px 0; gap: 8px; }
