@@ -169,17 +169,32 @@ input { font: inherit; color: inherit; }
 
 /* ===== 顶栏 ===== */
 .topbar {
-  position: relative;
+  position: sticky;
+  top: 0;
   flex: none;
   display: flex;
   align-items: center;
   justify-content: space-between;
   padding: calc(8px + env(safe-area-inset-top)) 8px 8px;
   border-bottom: 1px solid var(--line-soft);
-  /* 顶栏改为不透明纯色：iOS 上 backdrop-filter 会把整条顶栏（含日期文字）
-     栅格化成低分辨率图层，放大回原尺寸就发虚，去掉即清晰 */
+  /* iOS 27 主屏 PWA 会在顶部叠一层系统模糊（WebKit bug 324438）。
+     顶栏吸顶 + 不透明底 + safe-area 背景可触发其正常合成路径；另配 .status-veil 兜底。
+     页面内也不要再使用 backdrop-filter。 */
   background: var(--bg);
   z-index: 20;
+}
+/* iOS 27 PWA 顶部系统模糊兜底：仅 standalone 显示，画在状态栏区域，视觉与顶栏同色 */
+.status-veil { display: none; }
+@media (display-mode: standalone) {
+  .status-veil {
+    display: block;
+    position: fixed;
+    top: 0; left: 0; right: 0;
+    height: 11px;
+    background: var(--bg);
+    pointer-events: none;
+    z-index: 21;
+  }
 }
 .titlewrap {
   flex: 1;

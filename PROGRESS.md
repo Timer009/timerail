@@ -1151,7 +1151,7 @@ P3.9 的实现是「条目只存 type，徽标实时读 settings.logCustom」，
 
 ---
 
-## P3.16 · 进阶区卡片化 + iOS 顶部文字发虚排查 ✅ 2026-11-16（待验收）
+## P3.16 · 进阶区卡片化 + iOS 顶部文字发虚排查 ✅ 2026-11-16（已验收）
 
 ### 进阶区
 
@@ -1177,3 +1177,29 @@ P3.9 的实现是「条目只存 type，徽标实时读 settings.logCustom」，
 - ✅ 展开/收起 `aria-expanded`、`.open`、蓝边、蓝字、背景 tint 全部正确
 - ✅ 浅色下卡片蓝边 `#4c8dff`、底色 `#e9f1ff`、名称 `#255fc4`，不溢出
 - ✅ 全页无 `backdrop-filter`；顶栏/底栏均为不透明色；底栏 390 宽不溢出
+
+---
+
+## P3.17 · iOS 27 PWA 顶部系统模糊规避 ✅ 2026-11-16（待真机验收）
+
+### 结论
+
+- 不是页面 CSS 的 `backdrop-filter`。WebKit bug 324438（2026-09 报告，状态 NEW）：iOS 27 主屏 PWA 会在顶部安全区及下方标题区域叠加一层**系统级模糊**，网页侧无法用 `backdrop-filter: none` 关掉。
+- 现象与用户描述一致：捏合缩放时内容重新栅格化变清晰，松手回到 100% 又被系统模糊层盖住。
+- 社区实机验证的两个规避路径：① 顶部 header 吸顶 + 不透明背景铺到 safe area；② 页面最顶部放一个带背景的 fixed 元素。
+
+### 改动
+
+- `.topbar` 由 `position: relative` 改为 `position: sticky; top: 0`，继续保持不透明 `var(--bg)` 与 `env(safe-area-inset-top)` 内边距。
+- 新增 `.status-veil`：仅 `@media (display-mode: standalone)` 显示，`position: fixed`、高 11px、背景 `var(--bg)`、`pointer-events: none`、`z-index: 21`，视觉上与顶栏同色，作为方法②兜底。
+- 全页仍然零 `backdrop-filter`。
+
+### 版本
+
+`?v=p3.17`、SW `timerail-p3.17`、设置页 P3.17 (2026-11-16)。
+
+### 验收
+
+- ✅ 无头自测 16 项全绿：顶栏 sticky/贴顶/不透明/safe-area、轨道从顶栏下方开始、24 节点、底栏不溢出、零 backdrop-filter、深浅色正常
+- ⏳ 需 iOS 主屏 PWA 实机确认：彻底退出应用再打开（让 SW 换到 p3.17），顶部日期是否清晰
+- 若仍模糊：下一步尝试把 `.status-veil` 高度从 11px 加到 `env(safe-area-inset-top)`，或移除已废弃的 `apple-mobile-web-app-status-bar-style` 后重装 PWA

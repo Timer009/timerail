@@ -52,7 +52,8 @@ timerail/
 - 图标（P3.8）：深底 `#0e131f` + 白色「微记」字标 + 轨道折线；`icon-192/512`、`apple-touch-icon`(180)、`icon-maskable-512` 同一母版，maskable 内容缩到 70% 安全区；字标字体自 P3.10.1 起为华文楷体（带轻微描边），生成脚本不入库
 - 小记（P3.9）：条目 `type` 为 `highlight / review / custom`；自定义只有一套，名称与表情存在 `settings.logCustom`（名称 ≤4 字、表情限白名单）；不要做「删除类型」
 - 备份提醒（P3.12）：`settings.lastExportAt` 由导出动作写入，normalize 校验；`renderBackupWarn()` 在 renderSettings 末尾调用，有数据且 ≥7 天（或从未导出）才亮，7 天内或无数据必须隐藏
-- iOS 发虚（P3.13.1 / P3.16）：**整个页面禁用 `backdrop-filter`**。iOS 上只要存在 backdrop-filter，就可能把整页（含顶栏日期文字）栅格化成低分辨率图层，放大回原尺寸就发虚。P3.16 已把底栏与引导遮罩的 backdrop-filter 一并删除，顶栏/底栏都用不透明底色（`var(--bg)` / `var(--bar-bg)`），引导只用 scrim。新增任何条带、弹层都不要用 backdrop-filter。
+- iOS 顶部发虚（P3.17 定论）：这是 **iOS 27 主屏 PWA 的系统模糊层**（WebKit bug 324438），不是页面 CSS；`backdrop-filter: none` 关不掉。表现是捏合缩放时清晰、松手回 100% 又模糊。当前规避：`.topbar` 改 `position: sticky; top: 0` + 不透明 `var(--bg)` + safe-area 内边距；另加仅 standalone 显示的 `.status-veil`（fixed、11px、同色底、`pointer-events: none`、`z-index: 21`）兜底。若未来失效，尝试把 veil 高度改为 `env(safe-area-inset-top)` 或移除已废弃的 `apple-mobile-web-app-status-bar-style` 后重装 PWA。
+- 全页禁用 `backdrop-filter`：iOS 上它也会把含文字条带栅格化。顶栏、底栏、引导遮罩均为不透明底；新增条带/弹层同样不要用。
 - 日历选天（P3.13）：`#date-label` 点击 `openCal()`；`renderCal()` 42 格固定，dim=非本月、today=shiftDateOf 口径、sel=view.date、has=有事项或小记；跳转后 `render()+closeCal()+scrollToNow(true)`。`.titlewrap` 仍为 pointer-events:none，仅 `#date-label` 放开
 - 节日区间（P3.14）：`HOL_RANGES` = [名称, 起始日, 天数]，启动展开成 `HOLMAP`（{name,idx,total}）；顶栏显示「国庆假期 第3天」。区间为通常放假长度（元旦3/春节7/清明3/劳动5/端午3/中秋3/国庆7），**不含调休补班**；重叠时先声明先赢（2028 中秋在国庆内）。农历节日逐年录入，2029 起续表
 - 小记快照（P3.9.1）：`custom` 条目入库时写 `emoji / label` 定格当时的图标与名字，改类型只影响新条目；normalize 校验这两字段，缺失时退回当前配置
