@@ -167,24 +167,25 @@ body {
 button { font: inherit; color: inherit; background: none; border: 0; cursor: pointer; }
 input { font: inherit; color: inherit; }
 
-/* ===== 顶栏 ===== */
+/* ===== 顶栏 + 日期条（P3.25：合成一个视觉块）=====
+ * 图标条和日期条共用 --bg、中间不画分隔线，只在日期条下方留一条线，
+ * 读起来是一个 100px 的整体头部，而不是两条各自为政的横条。 */
 .topbar {
   position: relative;
   flex: none;
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: calc(8px + env(safe-area-inset-top)) 8px 8px;
+  padding: calc(2px + env(safe-area-inset-top)) 8px 2px;
   /* iOS 主屏用 default 状态栏（P3.20）：内容整体位于状态栏下方，
      系统模糊层够不到这里；standalone 下 env(safe-area-inset-top) 为 0，内边距自动收敛。 */
   background: var(--bg);
   z-index: 20;
 }
-/* 日期条（P3.23）：从顶栏搬出来独立成条，普通流内、无 z-index、无合成层。
-   顶栏那条带上的文字被改后会留在低分辨率图层，这里彻底不走那条路径。 */
+/* 日期条（P3.23）：从顶栏搬出来独立成条，普通流内、无 z-index、无合成层。 */
 .dayhead {
   flex: none;
-  padding: 8px 16px 9px;
+  padding: 2px 16px 8px;
   text-align: center;
   background: var(--bg);
   border-bottom: 1px solid var(--line-soft);
