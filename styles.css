@@ -213,14 +213,23 @@ input { font: inherit; color: inherit; }
   white-space: nowrap;
   overflow: hidden;
 }
+/* 顶栏图标（P3.24）：只剩四个，放大到 44px 触达区，分左右两组——
+   ‹ › 相邻成对放左边，⇄ ⚙ 放右边 */
+.nav-left,
+.nav-right {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+}
 .icon {
-  width: 38px; height: 38px; flex: none;
-  border-radius: 10px;
-  font-size: 18px; line-height: 1;
+  width: 44px; height: 44px; flex: none;
+  border-radius: 12px;
+  font-size: 21px; line-height: 1;
   color: var(--muted);
   display: flex; align-items: center; justify-content: center;
   transition: background .15s, color .15s;
 }
+.icon.chev { font-size: 28px; padding-bottom: 3px; }
 .icon:active { background: var(--panel-2); color: var(--text); }
 
 /* ===== 存储失败告警条（常驻，直到恢复成功） ===== */
