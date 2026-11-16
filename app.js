@@ -52,6 +52,8 @@
  *           移除 P3.18 的 cover/panel 自愈（已证伪）
  *   - P3.21：iOS 主屏改日期后顶栏文字发虚的定向修复 —— 换日改成先收日历、下一帧再渲染，
  *           日期文字变化后叠一块 1.2% 全屏层做一次透明度过渡，逼系统重栅格化
+ *   - P3.22：顶栏两行文字提升为独立合成层 + 每次改写都换新文本节点；
+ *           换日后把 .titlewrap 摘下来再接回去，强制重建布局对象与图层（替代 P3.21 的 1.2% 全屏层）
  */
 (function () {
 'use strict';
@@ -950,13 +952,20 @@ function syncThemeUI() {
   else if (mq.addListener) mq.addListener(onChange);
 })();
 
-/* ===== iOS 主屏顶栏文字重栅格化（P3.21）=====
- * 实测：在日历里换一天后，顶栏日期两行会发虚；开一次小记/设置面板再关上就恢复清晰。
- * 说明这是「改完文字后留在低分辨率图层上」，面板的透明度过渡会逼系统按当前缩放重新栅格化。
- * 这里走同一条路径：改完日期后叠一块 1.2% 不透明的全屏层做一次透明度过渡，再撤掉。
- * 只在 iOS standalone 下插入节点，Safari / 安卓 / 桌面完全不受影响。
+/* ===== iOS 主屏顶栏文字重栅格化（P3.22）=====
+ * 实测（用户复现）：日历里换一天后，顶栏日期两行发虚；再开一次小记/设置面板再关上就恢复清晰。
+ * 面板开合能恢复，是因为那块子树被重建了一次布局对象，旧的低分辨率图层被丢掉；
+ * P3.21 叠 1.2% 全屏层没用，说明只改合成透明度不会让文字重新栅格化。
+ * 这里直接重建布局对象：把 .titlewrap 摘下、强制算一次布局、再接回原位。
+ * 摘和接在同一个任务里完成，屏幕上不会出现空帧；只在 iOS standalone 下执行。
  */
-var paintNudgeEl = null, paintNudgeTimer = 0, paintNudgeDelay = 0;
+var headerFixTimer = 0, headerFixTimer2 = 0;
+
+/* 改写文字时换一个全新的文本节点，避开 iOS 对旧字形图层的复用 */
+function setText(node, txt) {
+  node.textContent = '';
+  node.appendChild(document.createTextNode(txt));
+}
 
 function isIOSStandalone() {
   var ua = navigator.userAgent || '';
@@ -967,26 +976,23 @@ function isIOSStandalone() {
   return navigator.standalone === true;
 }
 
-function repaintTop() {
+function rebuildHeaderLayer() {
   if (!isIOSStandalone()) return;
-  if (!paintNudgeEl) {
-    paintNudgeEl = el('div', 'paint-nudge');
-    paintNudgeEl.setAttribute('aria-hidden', 'true');
-    document.body.appendChild(paintNudgeEl);
-  }
-  paintNudgeEl.classList.remove('on');
-  void paintNudgeEl.offsetWidth;   // 先落一次样式，后面的过渡才会真的跑起来
-  requestAnimationFrame(function () {
-    paintNudgeEl.classList.add('on');
-    clearTimeout(paintNudgeTimer);
-    paintNudgeTimer = setTimeout(function () { paintNudgeEl.classList.remove('on'); }, 200);
-  });
+  var wrap = document.querySelector('.titlewrap');
+  if (!wrap || !wrap.parentNode) return;
+  var parent = wrap.parentNode;
+  var next = wrap.nextSibling;
+  parent.removeChild(wrap);
+  void parent.offsetWidth;        // 真的算一遍布局，旧图层才会被丢掉
+  parent.insertBefore(wrap, next);
 }
 
-/* 等日历/面板收起、页面布局稳定后再重栅格化，避免和它们自己的合成操作打架 */
-function scheduleTopRepaint() {
-  clearTimeout(paintNudgeDelay);
-  paintNudgeDelay = setTimeout(repaintTop, 380);
+/* 等日历收起、页面布局稳定后再重建；400ms 一次，1000ms 再补一次（慢机首帧常常不生效） */
+function scheduleHeaderRebuild() {
+  clearTimeout(headerFixTimer);
+  clearTimeout(headerFixTimer2);
+  headerFixTimer = setTimeout(rebuildHeaderLayer, 400);
+  headerFixTimer2 = setTimeout(rebuildHeaderLayer, 1000);
 }
 
 function updateHeader() {
@@ -999,15 +1005,16 @@ function updateHeader() {
   var titleEl = document.getElementById('date-label');
   var titleTxt = rel + (d.getMonth() + 1) + '月' + d.getDate() + '日 ' + week + holTxt;
   if (titleEl.textContent !== titleTxt) {
-    titleEl.textContent = titleTxt;
-    scheduleTopRepaint();
+    setText(titleEl, titleTxt);
+    scheduleHeaderRebuild();
   }
 
   var rot = rotationOn();
   var sub = (rot ? '轮换 · ' : '') + shiftOf(viewKey()).name;
   if (isToday()) sub += ' · 现在 ' + fmt(nowMin());
   else sub += viewKey() < todayKey() ? ' · 历史' : ' · 未来';
-  document.getElementById('sub-label').textContent = sub;
+  var subEl = document.getElementById('sub-label');
+  if (subEl.textContent !== sub) setText(subEl, sub);
 
   document.getElementById('stat-done').textContent = '完成 ' + doneCount() + '/' + activeCount();
   document.getElementById('stat-plan').textContent = '已规划 ' + plannedHours() + 'h';

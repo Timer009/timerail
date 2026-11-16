@@ -181,24 +181,18 @@ input { font: inherit; color: inherit; }
   background: var(--bg);
   z-index: 20;
 }
-/* iOS 主屏（P3.21）：改完日期后顶部两行文字会留在低分辨率图层上，
-   开一次小记/设置面板就恢复清晰。这里用同一条合成路径自愈——
-   叠一块几乎不可见的全屏层做一次透明度过渡，逼系统按当前缩放重新栅格化。
-   只在 iOS standalone 下由 JS 插入，其他平台不存在这个节点。 */
-.paint-nudge {
-  position: fixed;
-  top: 0; left: 0; right: 0; bottom: 0;
-  background: var(--bg);
-  opacity: 0;
-  transition: opacity .16s ease-out;
-  pointer-events: none;
-  z-index: 2147483647;
-}
-.paint-nudge.on { opacity: .012; }
+/* iOS 主屏（P3.22）：改完日期后顶部两行文字会留在低分辨率图层上。
+   这里把这段文字提升为独立合成层；换日后由 app.js 把整块摘下再接回，
+   强制重建布局对象，和「开一次小记面板」恢复清晰的路径一致。 */
 .titlewrap {
   flex: 1;
   min-width: 0;
   text-align: center;
+  /* iOS 主屏（P3.22）：把这两行文字提升为独立合成层，强制按设备像素重新栅格化 */
+  -webkit-transform: translateZ(0);
+  transform: translateZ(0);
+  -webkit-backface-visibility: hidden;
+  backface-visibility: hidden;
 }
 .nav-right { display: flex; }
 /* 顶栏文字（P3.19）：行高取整数、不用 ellipsis，避免 iOS 上居中文字被单独栅格化后发虚；
