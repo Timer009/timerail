@@ -181,6 +181,20 @@ input { font: inherit; color: inherit; }
   background: var(--bg);
   z-index: 20;
 }
+/* iOS 主屏（P3.21）：改完日期后顶部两行文字会留在低分辨率图层上，
+   开一次小记/设置面板就恢复清晰。这里用同一条合成路径自愈——
+   叠一块几乎不可见的全屏层做一次透明度过渡，逼系统按当前缩放重新栅格化。
+   只在 iOS standalone 下由 JS 插入，其他平台不存在这个节点。 */
+.paint-nudge {
+  position: fixed;
+  top: 0; left: 0; right: 0; bottom: 0;
+  background: var(--bg);
+  opacity: 0;
+  transition: opacity .16s ease-out;
+  pointer-events: none;
+  z-index: 2147483647;
+}
+.paint-nudge.on { opacity: .012; }
 .titlewrap {
   flex: 1;
   min-width: 0;

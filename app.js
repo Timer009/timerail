@@ -50,6 +50,8 @@
  *           顶栏文字去掉 ellipsis / 半像素对齐，修 iOS 主屏日期发虚
  *   - P3.20：iOS 状态栏改 default —— 主屏内容整体退到状态栏下方，从根上离开系统模糊带；
  *           移除 P3.18 的 cover/panel 自愈（已证伪）
+ *   - P3.21：iOS 主屏改日期后顶栏文字发虚的定向修复 —— 换日改成先收日历、下一帧再渲染，
+ *           日期文字变化后叠一块 1.2% 全屏层做一次透明度过渡，逼系统重栅格化
  */
 (function () {
 'use strict';
@@ -948,6 +950,45 @@ function syncThemeUI() {
   else if (mq.addListener) mq.addListener(onChange);
 })();
 
+/* ===== iOS 主屏顶栏文字重栅格化（P3.21）=====
+ * 实测：在日历里换一天后，顶栏日期两行会发虚；开一次小记/设置面板再关上就恢复清晰。
+ * 说明这是「改完文字后留在低分辨率图层上」，面板的透明度过渡会逼系统按当前缩放重新栅格化。
+ * 这里走同一条路径：改完日期后叠一块 1.2% 不透明的全屏层做一次透明度过渡，再撤掉。
+ * 只在 iOS standalone 下插入节点，Safari / 安卓 / 桌面完全不受影响。
+ */
+var paintNudgeEl = null, paintNudgeTimer = 0, paintNudgeDelay = 0;
+
+function isIOSStandalone() {
+  var ua = navigator.userAgent || '';
+  if (!/iPhone|iPad|iPod/.test(ua)) return false;
+  try {
+    if (window.matchMedia && window.matchMedia('(display-mode: standalone)').matches) return true;
+  } catch (e) {}
+  return navigator.standalone === true;
+}
+
+function repaintTop() {
+  if (!isIOSStandalone()) return;
+  if (!paintNudgeEl) {
+    paintNudgeEl = el('div', 'paint-nudge');
+    paintNudgeEl.setAttribute('aria-hidden', 'true');
+    document.body.appendChild(paintNudgeEl);
+  }
+  paintNudgeEl.classList.remove('on');
+  void paintNudgeEl.offsetWidth;   // 先落一次样式，后面的过渡才会真的跑起来
+  requestAnimationFrame(function () {
+    paintNudgeEl.classList.add('on');
+    clearTimeout(paintNudgeTimer);
+    paintNudgeTimer = setTimeout(function () { paintNudgeEl.classList.remove('on'); }, 200);
+  });
+}
+
+/* 等日历/面板收起、页面布局稳定后再重栅格化，避免和它们自己的合成操作打架 */
+function scheduleTopRepaint() {
+  clearTimeout(paintNudgeDelay);
+  paintNudgeDelay = setTimeout(repaintTop, 380);
+}
+
 function updateHeader() {
   var d = view.date;
   var week = ['周日', '周一', '周二', '周三', '周四', '周五', '周六'][d.getDay()];
@@ -955,8 +996,12 @@ function updateHeader() {
   var rel = dayDiff === 0 ? '今天 · ' : dayDiff === -1 ? '昨天 · ' : dayDiff === 1 ? '明天 · ' : '';
   var hol = HOLMAP[ymd(d)];
   var holTxt = hol ? ' · ' + hol : '';
-  document.getElementById('date-label').textContent =
-    rel + (d.getMonth() + 1) + '月' + d.getDate() + '日 ' + week + holTxt;
+  var titleEl = document.getElementById('date-label');
+  var titleTxt = rel + (d.getMonth() + 1) + '月' + d.getDate() + '日 ' + week + holTxt;
+  if (titleEl.textContent !== titleTxt) {
+    titleEl.textContent = titleTxt;
+    scheduleTopRepaint();
+  }
 
   var rot = rotationOn();
   var sub = (rot ? '轮换 · ' : '') + shiftOf(viewKey()).name;
@@ -1922,10 +1967,13 @@ function renderCal() {
     if ((dd && dd.items.length) || (lg && lg.length)) b.className += ' has';
     b.addEventListener('click', (function (dd2) {
       return function () {
+        /* 先收起日历，再下一拍换日；顶栏文字不在弹层覆盖期间重排（P3.21） */
         view.date = dd2;
-        render();
         closeCal();
-        scrollToNow(true);
+        setTimeout(function () {
+          render();
+          scrollToNow(true);
+        }, 0);
       };
     })(new Date(d.getFullYear(), d.getMonth(), d.getDate())));
     grid.appendChild(b);
@@ -1947,9 +1995,11 @@ document.getElementById('cal-next').addEventListener('click', function () {
 });
 document.getElementById('cal-today').addEventListener('click', function () {
   view.date = shiftDateOf(new Date());
-  render();
   closeCal();
-  scrollToNow(true);
+  setTimeout(function () {
+    render();
+    scrollToNow(true);
+  }, 0);
 });
 calEl.addEventListener('click', function (e) { if (e.target === calEl) closeCal(); });
 
