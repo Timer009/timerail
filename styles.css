@@ -167,48 +167,48 @@ body {
 button { font: inherit; color: inherit; background: none; border: 0; cursor: pointer; }
 input { font: inherit; color: inherit; }
 
-/* ===== 顶栏 + 日期条（P3.25：合成一个视觉块）=====
- * 图标条和日期条共用 --bg、中间不画分隔线，只在日期条下方留一条线，
- * 读起来是一个 100px 的整体头部，而不是两条各自为政的横条。
- * P3.26 诊断实验 B：给 .topbar 加 60px 上外边距，把整条头部推离屏幕顶边，
- * 看「越靠近屏幕顶边越被按错比例栅格化」是否成立。测完即回滚这一行。 */
+/* ===== 顶栏（P3.27：安全垫 + 单条页头）=====
+ * 实机实验（P3.26）确认：iOS 主屏 PWA 里紧贴屏幕顶边的那条约 60px 会被按低比例
+ * 栅格化，文字和图标一起发虚；把内容整体推到这条线以下就立刻清晰。所以顶栏顶部
+ * 预留一条纯色安全垫（不放任何内容，也就无从发虚），图标与日期排在安全线下方的
+ * 同一条里：‹ › 在左、日期居中、⇄ ⚙ 在右。左右两组等宽，日期在屏幕上真正居中。
+ * 安全垫高度：实机边界约 60px，这里取 64px 留余量，不要调低。 */
 .topbar {
   position: relative;
   flex: none;
-  margin-top: 60px;
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: calc(2px + env(safe-area-inset-top)) 8px 2px;
-  /* iOS 主屏用 default 状态栏（P3.20）：内容整体位于状态栏下方，
-     系统模糊层够不到这里；standalone 下 env(safe-area-inset-top) 为 0，内边距自动收敛。 */
-  background: var(--bg);
-  z-index: 20;
-}
-/* 日期条（P3.23）：从顶栏搬出来独立成条，普通流内、无 z-index、无合成层。 */
-.dayhead {
-  flex: none;
-  padding: 2px 16px 8px;
-  text-align: center;
+  padding: calc(64px + env(safe-area-inset-top)) 4px 8px;
   background: var(--bg);
   border-bottom: 1px solid var(--line-soft);
+  z-index: 20;
+}
+/* 中间日期块：整块可点开日历。flex:1 + min-width:0 吃满两侧剩余宽度 */
+.head-mid {
+  flex: 1 1 auto;
+  min-width: 0;
+  padding: 0 2px;
+  text-align: center;
   cursor: pointer;
 }
-.dayhead-date {
-  font-size: 16px;
+.head-date {
+  font-size: 15px;
   font-weight: 600;
-  line-height: 22px;
+  line-height: 21px;
   white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
-.dayhead-sub {
+.head-sub {
   font-size: 12px;
   line-height: 18px;
   color: var(--muted);
   margin-top: 2px;
   white-space: nowrap;
   overflow: hidden;
+  text-overflow: ellipsis;
 }
-.nav-right { display: flex; }
 .sub {
   font-size: 11px;
   line-height: 16px;

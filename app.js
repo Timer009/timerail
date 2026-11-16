@@ -61,6 +61,8 @@
  *   - P3.25：图标条与日期条合成一个视觉块（同底色、中间不画线、上下留白收紧）
  *   - P3.26：发虚诊断实验 B —— .topbar 临时下移 60px，验证「越靠近屏幕顶边越会被
  *           按错比例栅格化」；纯诊断，测完回滚
+ *   - P3.27：实验 B 成立（60px 内必虚）→ 顶栏顶部改为 60px 纯色安全垫，图标与日期
+ *           合并成安全线下方的一条：‹ › 在左、日期居中、⇄ ⚙ 在右
  */
 (function () {
 'use strict';
@@ -959,11 +961,10 @@ function syncThemeUI() {
   else if (mq.addListener) mq.addListener(onChange);
 })();
 
-/* ===== 日期标题（P3.23）=====
- * 这两行原先放在顶栏正中，iOS 主屏上改完日期后会留在低分辨率图层上；
- * P3.19–P3.22 的规避（改行高、去 ellipsis、改状态栏、叠自愈层、重建布局对象）
- * 实机都没解决。现在把日期整块移出顶栏，独立成一条常驻的 .dayhead（普通流、无 z-index、
- * 无合成层提升），点它开日历。
+/* ===== 日期标题（P3.27）=====
+ * 这两行在顶栏正中，但整条顶栏顶部留了 60px 安全垫（见 styles.css），
+ * 文字实际落在安全线以下，iOS 主屏不会再按低比例栅格化。
+ * 点日期块开日历；「越靠近顶边越发虚」的实机证据见 PROGRESS P3.26。
  */
 function updateHeader() {
   var d = view.date;
@@ -971,13 +972,14 @@ function updateHeader() {
   var dayDiff = Math.round((d.getTime() - shiftDateOf(new Date()).getTime()) / 86400000);
   var rel = dayDiff === 0 ? '今天 · ' : dayDiff === -1 ? '昨天 · ' : dayDiff === 1 ? '明天 · ' : '';
   var hol = HOLMAP[ymd(d)];
-  var holTxt = hol ? ' · ' + hol : '';
   var titleEl = document.getElementById('date-label');
-  var titleTxt = rel + (d.getMonth() + 1) + '月' + d.getDate() + '日 ' + week + holTxt;
+  var titleTxt = rel + (d.getMonth() + 1) + '月' + d.getDate() + '日 ' + week;
   if (titleEl.textContent !== titleTxt) titleEl.textContent = titleTxt;
 
   var rot = rotationOn();
-  var sub = (rot ? '轮换 · ' : '') + shiftOf(viewKey()).name;
+  /* 节日放副标题行（P3.27）：日期行与图标同排，宽度只有约 198px，
+     带上「· 国庆节」会挤到截断；副标题字号小、空间够。 */
+  var sub = (hol ? hol + ' · ' : '') + (rot ? '轮换 · ' : '') + shiftOf(viewKey()).name;
   if (isToday()) sub += ' · 现在 ' + fmt(nowMin());
   else sub += viewKey() < todayKey() ? ' · 历史' : ' · 未来';
   var subEl = document.getElementById('sub-label');

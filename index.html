@@ -27,10 +27,10 @@
   if (m) m.setAttribute('content', light ? '#f5f8fc' : '#0e131f');
 })();
 </script>
-<link rel="manifest" href="manifest.webmanifest?v=p3.26">
+<link rel="manifest" href="manifest.webmanifest?v=p3.27">
 <link rel="icon" type="image/png" sizes="192x192" href="icon-192.png">
 <link rel="apple-touch-icon" href="apple-touch-icon.png">
-<link rel="stylesheet" href="styles.css?v=p3.26">
+<link rel="stylesheet" href="styles.css?v=p3.27">
 </head>
 <body>
 
@@ -39,17 +39,16 @@
     <button class="icon chev" id="prev" aria-label="前一天">‹</button>
     <button class="icon chev" id="next" aria-label="后一天">›</button>
   </div>
+  <!-- 日期（P3.27）：回到顶栏中间，整块可点开日历。左右两组图标等宽，日期真正居中 -->
+  <div class="head-mid" id="dayhead">
+    <div class="head-date" id="date-label">—</div>
+    <div class="head-sub" id="sub-label">—</div>
+  </div>
   <div class="nav-right">
     <button class="icon" id="orient" aria-label="切换为横向">⇄</button>
     <button class="icon" id="gear" aria-label="设置">⚙</button>
   </div>
 </header>
-
-<!-- 日期：P3.23 从顶栏移出，独立成条，常驻可见，点开日历 -->
-<div class="dayhead" id="dayhead">
-  <div class="dayhead-date" id="date-label">—</div>
-  <div class="dayhead-sub" id="sub-label">—</div>
-</div>
 
 <div id="storebar" hidden>
   <span>⚠ 保存失败：隐私模式或存储空间已满，改动可能丢失</span>
@@ -286,7 +285,7 @@
       <button type="button" class="ghost danger" id="reset">清空全部数据</button>
     </div>
 
-    <div class="note">数据仅保存在本设备浏览器中 · 版本 P3.26 (2026-11-16)</div>
+    <div class="note">数据仅保存在本设备浏览器中 · 版本 P3.27 (2026-11-16)</div>
   </div>
 </section>
 
@@ -308,6 +307,6 @@
 </div>
 
 <div id="toast"></div>
-<script src="app.js?v=p3.26"></script>
+<script src="app.js?v=p3.27"></script>
 </body>
 </html>
