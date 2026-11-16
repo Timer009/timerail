@@ -169,10 +169,13 @@ input { font: inherit; color: inherit; }
 
 /* ===== 顶栏 + 日期条（P3.25：合成一个视觉块）=====
  * 图标条和日期条共用 --bg、中间不画分隔线，只在日期条下方留一条线，
- * 读起来是一个 100px 的整体头部，而不是两条各自为政的横条。 */
+ * 读起来是一个 100px 的整体头部，而不是两条各自为政的横条。
+ * P3.26 诊断实验 B：给 .topbar 加 60px 上外边距，把整条头部推离屏幕顶边，
+ * 看「越靠近屏幕顶边越被按错比例栅格化」是否成立。测完即回滚这一行。 */
 .topbar {
   position: relative;
   flex: none;
+  margin-top: 60px;
   display: flex;
   align-items: center;
   justify-content: space-between;
