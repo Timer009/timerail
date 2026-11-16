@@ -1508,3 +1508,30 @@ P3.23 之后顶栏只有 `‹ › ⇄ ⚙`，但 `‹` 和 `›` 被 `space-betw
 - 顶部 64px 安全垫**不要为省空间调低**；以后任何新内容都排在这条线以下。
 - 若换机型（状态栏更高/更矮）仍然发虚，安全垫按同一公式加大，不要改回自愈补丁。
 - 实验 A（`apple-mobile-web-app-status-bar-style: black`）不再需要做。
+
+---
+
+## P3.28 · 安全垫里的品牌带 ✅ 2026-11-16
+
+### 一、做了什么
+
+在 P3.27 的 64px 纯色安全垫里加一条**极淡的轨道曲线**作为品牌带，填空同时不引入新的发虚源。
+
+- 结构：`.topbar` 内首个元素 `<svg class="brandband">`（`viewBox="0 0 390 64"`、`preserveAspectRatio="none"`、`aria-hidden="true"`），一条 S 形轨道，`y` 在 20–46 之间起伏。
+- 淡出：两端用 SVG 内的 `linearGradient`（`#bb-fade`，`stop-opacity` 0 → 1 → 1 → 0）实现水平渐隐，**不用 `mask-image` / `filter`**，避免再引入合成层。
+- 强度：`stroke: var(--muted)`、`opacity: .22`、`stroke-width: 1`、`pointer-events: none`。
+- **刻意不放文字**：安全垫内任何内容都会被低分辨率栅格化，纯 1px 线条虚化后只是一条淡线，看不出问题；放「微记」字标则必然糊。
+
+### 二、验收（无头，390×844 + 截图）
+
+- ✅ 22 项全绿：品牌带 390×64、贴顶、`pointer-events:none`、`stroke=url(#bb-fade)`、`opacity=0.22`、DOM 顺序在图标之前、安全垫中心命中的是 `.topbar`（不拦截点击）、顶栏仍 117px、图标 minTop=64、日期居中 195、无横向溢出、底栏贴底、轨道区 654px、24 节点、设置页 P3.28、换日与日历正常
+- ✅ 截图复核：曲线极淡、两端自然淡出，图标与日期行不受影响
+
+### 三、版本
+
+`?v=p3.28`（manifest / styles.css / app.js 三处）、SW `timerail-p3.28`、设置页 P3.28 (2026-11-16)。纯前端改动，不必删图标重装。
+
+### 四、留的坑
+
+- 品牌带是纯装饰，**不要往里加文字或图标**；真要加必须落在安全线以下。
+- 桌面 480px 宽时曲线会被横向拉伸（`preserveAspectRatio="none"`），属预期。

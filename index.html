@@ -27,14 +27,26 @@
   if (m) m.setAttribute('content', light ? '#f5f8fc' : '#0e131f');
 })();
 </script>
-<link rel="manifest" href="manifest.webmanifest?v=p3.27">
+<link rel="manifest" href="manifest.webmanifest?v=p3.28">
 <link rel="icon" type="image/png" sizes="192x192" href="icon-192.png">
 <link rel="apple-touch-icon" href="apple-touch-icon.png">
-<link rel="stylesheet" href="styles.css?v=p3.27">
+<link rel="stylesheet" href="styles.css?v=p3.28">
 </head>
 <body>
 
 <header class="topbar">
+  <!-- 品牌带（P3.28）：安全垫里的极淡轨道意象。纯图形、无文字，虚化也不易察觉 -->
+  <svg class="brandband" viewBox="0 0 390 64" preserveAspectRatio="none" aria-hidden="true">
+    <defs>
+      <linearGradient id="bb-fade" x1="0" y1="0" x2="1" y2="0">
+        <stop offset="0" stop-color="currentColor" stop-opacity="0"/>
+        <stop offset="0.22" stop-color="currentColor" stop-opacity="1"/>
+        <stop offset="0.78" stop-color="currentColor" stop-opacity="1"/>
+        <stop offset="1" stop-color="currentColor" stop-opacity="0"/>
+      </linearGradient>
+    </defs>
+    <path d="M-20 46 C 45 46, 60 20, 115 20 S 185 46, 245 46 S 315 20, 410 20"></path>
+  </svg>
   <div class="nav-left">
     <button class="icon chev" id="prev" aria-label="前一天">‹</button>
     <button class="icon chev" id="next" aria-label="后一天">›</button>
@@ -285,7 +297,7 @@
       <button type="button" class="ghost danger" id="reset">清空全部数据</button>
     </div>
 
-    <div class="note">数据仅保存在本设备浏览器中 · 版本 P3.27 (2026-11-16)</div>
+    <div class="note">数据仅保存在本设备浏览器中 · 版本 P3.28 (2026-11-16)</div>
   </div>
 </section>
 
@@ -307,6 +319,6 @@
 </div>
 
 <div id="toast"></div>
-<script src="app.js?v=p3.27"></script>
+<script src="app.js?v=p3.28"></script>
 </body>
 </html>

@@ -184,6 +184,21 @@ input { font: inherit; color: inherit; }
   border-bottom: 1px solid var(--line-soft);
   z-index: 20;
 }
+/* 品牌带（P3.28）：安全垫里一条极淡的轨道曲线，纯装饰、指针穿透。
+ * 两端用 SVG 自身的透明度渐变淡出，不用 mask / filter —— 避免再引入合成层。 */
+.brandband {
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 100%;
+  height: 64px;
+  fill: none;
+  stroke: url(#bb-fade);
+  stroke-width: 1;
+  color: var(--muted);
+  opacity: .22;
+  pointer-events: none;
+}
 /* 中间日期块：整块可点开日历。flex:1 + min-width:0 吃满两侧剩余宽度 */
 .head-mid {
   flex: 1 1 auto;
