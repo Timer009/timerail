@@ -175,34 +175,36 @@ input { font: inherit; color: inherit; }
   align-items: center;
   justify-content: space-between;
   padding: calc(8px + env(safe-area-inset-top)) 8px 8px;
-  border-bottom: 1px solid var(--line-soft);
   /* iOS 主屏用 default 状态栏（P3.20）：内容整体位于状态栏下方，
      系统模糊层够不到这里；standalone 下 env(safe-area-inset-top) 为 0，内边距自动收敛。 */
   background: var(--bg);
   z-index: 20;
 }
-/* iOS 主屏（P3.22）：改完日期后顶部两行文字会留在低分辨率图层上。
-   这里把这段文字提升为独立合成层；换日后由 app.js 把整块摘下再接回，
-   强制重建布局对象，和「开一次小记面板」恢复清晰的路径一致。 */
-.titlewrap {
-  flex: 1;
-  min-width: 0;
+/* 日期条（P3.23）：从顶栏搬出来独立成条，普通流内、无 z-index、无合成层。
+   顶栏那条带上的文字被改后会留在低分辨率图层，这里彻底不走那条路径。 */
+.dayhead {
+  flex: none;
+  padding: 8px 16px 9px;
   text-align: center;
-  /* iOS 主屏（P3.22）：把这两行文字提升为独立合成层，强制按设备像素重新栅格化 */
-  -webkit-transform: translateZ(0);
-  transform: translateZ(0);
-  -webkit-backface-visibility: hidden;
-  backface-visibility: hidden;
+  background: var(--bg);
+  border-bottom: 1px solid var(--line-soft);
+  cursor: pointer;
 }
-.nav-right { display: flex; }
-/* 顶栏文字（P3.19）：行高取整数、不用 ellipsis，避免 iOS 上居中文字被单独栅格化后发虚；
-   节日只显示节日名，最长「12月31日 周三 · 中秋节」，14px 下放得下，所以不再截断。 */
-.title {
-  font-size: 14px;
+.dayhead-date {
+  font-size: 16px;
   font-weight: 600;
-  line-height: 20px;
+  line-height: 22px;
   white-space: nowrap;
 }
+.dayhead-sub {
+  font-size: 12px;
+  line-height: 18px;
+  color: var(--muted);
+  margin-top: 2px;
+  white-space: nowrap;
+  overflow: hidden;
+}
+.nav-right { display: flex; }
 .sub {
   font-size: 11px;
   line-height: 16px;
@@ -863,8 +865,6 @@ body.horiz .hint {
 .note { padding-top: 14px; font-size: 11px; color: var(--muted-2); line-height: 1.6; }
 
 /* ===== 日历选天（P3.13）===== */
-/* titlewrap 整体不吃事件，只放开日期标题本身 */
-#date-label { pointer-events: auto; cursor: pointer; }
 .cal-head {
   display: flex; align-items: center; justify-content: space-between;
   margin-bottom: 4px;
