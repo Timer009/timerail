@@ -64,6 +64,8 @@
  *   - P3.27：实验 B 成立（60px 内必虚）→ 顶栏顶部改为 60px 纯色安全垫，图标与日期
  *           合并成安全线下方的一条：‹ › 在左、日期居中、⇄ ⚙ 在右
  *   - P3.28：安全垫里加一条极淡的轨道曲线作品牌带（纯图形、无文字，指针穿透）
+ *   - P3.29：演示数据换成大众日常事项（晨跑/早饭/周报/邮件/整理桌面），
+ *           不再出现行业场景词
  */
 (function () {
 'use strict';
@@ -914,14 +916,14 @@ function syncStartUI() {
   startCustom.disabled = rot;
   if (!rot) startCustom.value = fmt(cur);
   document.getElementById('start-hint').textContent = rot
-    ? '轮换启用中，起点由日程模板决定'
+    ? '自动套用开启中，起点由日程模板决定'
     : '睡醒算新的一天；跨零点作息可选 20:00';
 }
 
 /* 进阶区收起时的一行摘要 */
 function updateAdvSum() {
   var n = Object.keys(data.shifts).length;
-  advSum.textContent = '已存 ' + n + ' 套日程 · ' + (rotationOn() ? '轮换已启用' : '未启用轮换');
+  advSum.textContent = '已存 ' + n + ' 套日程 · ' + (rotationOn() ? '已开启自动套用' : '未开启自动套用');
 }
 
 /* ===== 主题（P3.15）=====
@@ -980,7 +982,7 @@ function updateHeader() {
   var rot = rotationOn();
   /* 节日放副标题行（P3.27）：日期行与图标同排，宽度只有约 198px，
      带上「· 国庆节」会挤到截断；副标题字号小、空间够。 */
-  var sub = (hol ? hol + ' · ' : '') + (rot ? '轮换 · ' : '') + shiftOf(viewKey()).name;
+  var sub = (hol ? hol + ' · ' : '') + (rot ? '自动套用 · ' : '') + shiftOf(viewKey()).name;
   if (isToday()) sub += ' · 现在 ' + fmt(nowMin());
   else sub += viewKey() < todayKey() ? ' · 历史' : ' · 未来';
   var subEl = document.getElementById('sub-label');
@@ -1673,11 +1675,11 @@ function renderSettings() {
   }
   if (document.activeElement !== rotAnchor) rotAnchor.value = data.rotation.anchorDate || '';
   var on = rotationOn();
-  rotToggle.textContent = on ? '停用轮换' : '启用轮换';
+  rotToggle.textContent = on ? '停用自动套用' : '启用自动套用';
   rotToggle.classList.toggle('on', on);
   rotHint.textContent = on
-    ? '轮换已启用：每天按周期套用日程模板，「一天的起点」随日期变化'
-    : '启用后从起始日期起，按周期逐天套用日程模板';
+    ? '自动套用已开启：每天按周期套用日程模板，「一天的起点」随日期变化'
+    : '启用后从起始日期起，按周期逐天自动套用日程模板';
   renderBackupWarn();
   updateAdvSum();
   syncThemeUI();
@@ -1725,7 +1727,7 @@ function applyShift(id) {
   scrollToNow(false);
   renderSettings();
   showSheet(settingsSheet);
-  toast(hadRot ? '已套用「' + t.name + '」，轮换已停用' : '已套用「' + t.name + '」');
+  toast(hadRot ? '已套用「' + t.name + '」，自动套用已停用' : '已套用「' + t.name + '」');
   haptic();
 }
 
@@ -1770,14 +1772,14 @@ rotToggle.addEventListener('click', function () {
     render();
     scrollToNow(false);
     renderSettings();
-    toast('已停用轮换');
+    toast('已停用自动套用');
     return;
   }
   if (!data.rotation.cycle.length) { toast('先在周期里加至少一天'); return; }
   if (!data.rotation.anchorDate) data.rotation.anchorDate = todayKey();
   data.rotation.active = true;
   afterRotChange();
-  toast('轮换已启用');
+  toast('自动套用已开启');
   haptic();
 });
 
@@ -2216,11 +2218,11 @@ function seedItems(key, rows) {
 }
 function seedDemo() {
   seedItems(todayKey(), [
-    ['周会纪要', 450, 'missed'],
-    ['交接班：设备读数与遗留问题', 480, 'done'],
-    ['写巡检脚本', 540, 'doing'],
-    ['设备点检（3 号机）', 630, 'todo'],
-    ['整理交接文档', 660, 'todo']
+    ['晨跑 5 公里', 450, 'missed'],
+    ['吃早饭', 480, 'done'],
+    ['写周报', 540, 'doing'],
+    ['回复邮件', 630, 'todo'],
+    ['整理桌面', 660, 'todo']
   ]);
 }
 /* 两天演示：昨天留两条未完成，并把它们直接预置进顺延池（不再自动搬运） */
@@ -2229,18 +2231,18 @@ function seedDemo2() {
   var y = new Date(base);
   y.setDate(y.getDate() - 1);
   seedItems(ymd(y), [
-    ['周会纪要', 450, 'missed'],
-    ['写巡检脚本', 540, 'missed'],
-    ['设备点检（3 号机）', 630, 'done'],
-    ['整理交接文档', 660, 'todo']
+    ['晨跑 5 公里', 450, 'missed'],
+    ['写周报', 540, 'missed'],
+    ['洗衣服', 630, 'done'],
+    ['读 30 页书', 660, 'todo']
   ]);
   seedItems(todayKey(), [
-    ['写巡检脚本（续）', 540, 'todo'],
-    ['交接班：设备读数', 480, 'doing']
+    ['写周报（续）', 540, 'todo'],
+    ['回复邮件', 480, 'doing']
   ]);
   [
-    { id: 'pool_demo_1', title: '周会纪要' },
-    { id: 'pool_demo_2', title: '写巡检脚本' }
+    { id: 'pool_demo_1', title: '晨跑 5 公里' },
+    { id: 'pool_demo_2', title: '写周报' }
   ].forEach(function (p) {
     var exists = data.pool.some(function (x) { return x.id === p.id; });
     if (!exists) data.pool.push({ id: p.id, title: p.title, fromDate: ymd(y), carriedTimes: 1 });
