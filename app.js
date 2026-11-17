@@ -68,6 +68,8 @@
  *           不再出现行业场景词
  *   - P3.30：记录页 —— 顶栏右滑（跟手）或底栏「记录」打开；上半是当天长文，
  *           边写边存，下半是当天速记，可直接补记一条
+ *   - P3.31：删掉「进阶 · 多套日程」，起点回到设置里手选；小记页签移到输入框
+ *           上方并标「记成」；新增文本导出（当天 / 全部，UTF-8 txt，不可导回）
  */
 (function () {
 'use strict';
@@ -250,7 +252,8 @@ function normalize(d) {
   rot.cycle = Array.isArray(rot.cycle) ? rot.cycle.filter(function (id) {
     return id === 'rest' || Object.prototype.hasOwnProperty.call(shifts, id);
   }).slice(0, 28) : [];
-  rot.active = !!rot.active && rot.cycle.length > 0 && !!rot.anchorDate;
+  // P3.31：多套日程已移除。字段留着只为读旧备份，一律关掉，避免"看不见却还生效"
+  rot.active = false;
   if (!d.days || typeof d.days !== 'object') d.days = {};
   if (!Array.isArray(d.pool)) d.pool = [];
   var pseen = {};
@@ -398,29 +401,15 @@ function hideStoreBar() { if (storeBar) storeBar.hidden = true; }
 /* ===== 日期与时段 =====
  * item.start 存的是「一天中的绝对分钟数」（0–1439），不是相对起点的偏移。
  * 这样改"一天的起点"时，事项仍钉在真实钟点上。
- * P3.1：起点是"每一天"的属性 —— 轮转启用时按日期取模板，否则用 settings.dayStart。
+ * P3.31：起点固定取 settings.dayStart（多套日程已移除）。
  */
 function parseKey(k) {
   var m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(k || '');
   return m ? new Date(+m[1], +m[2] - 1, +m[3]) : null;
 }
-function rotationOn() {
-  var r = data.rotation;
-  return !!(r && r.active && r.cycle.length && parseKey(r.anchorDate));
-}
-/* 某一天用哪个班次：轮转按周期取模板（rest = 休息日，00:00 起） */
-function shiftOf(key) {
-  if (rotationOn()) {
-    var r = data.rotation, a = parseKey(r.anchorDate), b = parseKey(key);
-    if (a && b) {
-      var n = r.cycle.length;
-      var idx = ((Math.round((b - a) / 86400000) % n) + n) % n;
-      var id = r.cycle[idx];
-      if (id === 'rest') return { name: '休息', dayStart: 0 };
-      var t = data.shifts[id];
-      if (t) return { name: t.name, dayStart: t.dayStart };
-    }
-  }
+/* 某一天用哪个班次：P3.31 起多套日程已移除，固定用设置里的名称与起点；
+ * shifts / rotation 字段仍保留解析，只为读得进旧备份。 */
+function shiftOf() {
   return { name: cfg().shiftName || '常规日', dayStart: cfg().dayStart };
 }
 function startOfKey(key) { return shiftOf(key).dayStart; }
@@ -518,19 +507,7 @@ var settingsSheet = document.getElementById('settings');
 var addForm = document.getElementById('add-form');
 var addInput = document.getElementById('add-input');
 var shiftInput = document.getElementById('shift-name');
-var tplList = document.getElementById('tpl-list');
-var tplForm = document.getElementById('tpl-form');
-var tplName = document.getElementById('tpl-name');
-var tplStart = document.getElementById('tpl-start');
-var tplDur = document.getElementById('tpl-dur');
-var rotCycleEl = document.getElementById('rot-cycle');
-var rotAnchor = document.getElementById('rot-anchor');
-var rotToggle = document.getElementById('rot-toggle');
-var rotHint = document.getElementById('rot-hint');
 var startCustom = document.getElementById('start-custom');
-var advToggle = document.getElementById('adv-toggle');
-var advBody = document.getElementById('adv-body');
-var advSum = document.getElementById('adv-sum');
 var logSheet = document.getElementById('log-sheet');
 var logTabs = document.getElementById('log-tabs');
 var logList = document.getElementById('log-list');
@@ -930,26 +907,15 @@ function plannedHours() {
 var startCustomMode = false;
 function isPresetStart(v) { return v === 0 || v === 360 || v === 480; }
 function syncStartUI() {
-  var rot = rotationOn();
   var cur = cfg().dayStart;
   var custom = startCustomMode || !isPresetStart(cur);
   Array.prototype.forEach.call(document.querySelectorAll('#startseg button'), function (b) {
     var key = b.dataset.start;
-    b.classList.toggle('active', !rot && (key === 'custom' ? custom : (!custom && +key === cur)));
-    b.disabled = rot;
+    b.classList.toggle('active', key === 'custom' ? custom : (!custom && +key === cur));
   });
-  startCustom.hidden = rot || !custom;
-  startCustom.disabled = rot;
-  if (!rot) startCustom.value = fmt(cur);
-  document.getElementById('start-hint').textContent = rot
-    ? '自动套用开启中，起点由日程模板决定'
-    : '睡醒算新的一天；跨零点作息可选 20:00';
-}
-
-/* 进阶区收起时的一行摘要 */
-function updateAdvSum() {
-  var n = Object.keys(data.shifts).length;
-  advSum.textContent = '已存 ' + n + ' 套日程 · ' + (rotationOn() ? '已开启自动套用' : '未开启自动套用');
+  startCustom.hidden = !custom;
+  startCustom.value = fmt(cur);
+  document.getElementById('start-hint').textContent = '睡醒算新的一天；跨零点作息可选 20:00';
 }
 
 /* ===== 主题（P3.15）=====
@@ -1005,10 +971,7 @@ function updateHeader() {
   var titleTxt = rel + (d.getMonth() + 1) + '月' + d.getDate() + '日 ' + week;
   if (titleEl.textContent !== titleTxt) titleEl.textContent = titleTxt;
 
-  var rot = rotationOn();
-  /* 节日放副标题行（P3.27）：日期行与图标同排，宽度只有约 198px，
-     带上「· 国庆节」会挤到截断；副标题字号小、空间够。 */
-  var sub = (hol ? hol + ' · ' : '') + (rot ? '自动套用 · ' : '') + shiftOf(viewKey()).name;
+  var sub = (hol ? hol + ' · ' : '') + shiftOf(viewKey()).name;
   if (isToday()) sub += ' · 现在 ' + fmt(nowMin());
   else sub += viewKey() < todayKey() ? ' · 历史' : ' · 未来';
   var subEl = document.getElementById('sub-label');
@@ -1026,7 +989,6 @@ function updateHeader() {
   Array.prototype.forEach.call(document.querySelectorAll('#gseg button'), function (b) {
     b.classList.toggle('active', +b.dataset.g === cfg().granularity);
   });
-  // 轮换启用时起点由模板决定，手动按钮置灰
   syncStartUI();
   Array.prototype.forEach.call(document.querySelectorAll('#styleseg button'), function (b) {
     b.classList.toggle('active', b.dataset.style === cfg().trackStyle);
@@ -1034,8 +996,7 @@ function updateHeader() {
   var oi = document.getElementById('orient');
   oi.textContent = isHoriz() ? '⇅' : '⇄';
   oi.setAttribute('aria-label', isHoriz() ? '切换为竖向' : '切换为横向');
-  if (document.activeElement !== shiftInput) shiftInput.value = rot ? shiftOf(viewKey()).name : (cfg().shiftName || '');
-  shiftInput.disabled = rot;
+  if (document.activeElement !== shiftInput) shiftInput.value = cfg().shiftName || '';
 }
 
 /* ===== 时间锚点 ===== */
@@ -1432,8 +1393,8 @@ function renderLogTabs() {
     if (t === logType) b.className = 'active';
     logTabs.appendChild(b);
   }
-  add('highlight', '✨ 今日高光');
-  add('review', '🌱 今日复盘');
+  add('highlight', '✨ 高光');
+  add('review', '🌱 复盘');
   if (data.settings.logCustom) {
     add('custom', data.settings.logCustom.emoji + ' ' + data.settings.logCustom.name);
   } else {
@@ -1771,132 +1732,15 @@ diaryTopEl.addEventListener('touchend', function (e) {
   if (dx < -50 && Math.abs(dx) > Math.abs(dy)) closeDiary();
 });
 
-/* ===== 班次模板 / 轮转（设置面板） ===== */
+/* ===== 设置面板辅助 ===== */
 function timeVal(v) {
   var m = /^(\d{1,2}):(\d{2})$/.exec(v || '');
   if (!m) return null;
   var t = +m[1] * 60 + +m[2];
   return (t >= 0 && t < 1440) ? t : null;
 }
-function tplMeta(t) { return fmt(t.dayStart) + ' – ' + fmt((t.dayStart + t.duration) % 1440); }
-
-/* 通用行内改名：设置面板里改模板名，Enter/失焦保存，Esc 取消 */
-function inlineRename(target, maxLen, onCommit) {
-  if (target.querySelector('input')) return;
-  var input = document.createElement('input');
-  input.className = 'rename';
-  input.type = 'text';
-  input.maxLength = maxLen;
-  input.value = target.textContent;
-  target.textContent = '';
-  target.classList.add('editing');
-  target.appendChild(input);
-  input.focus();
-  input.select();
-  var done = false;
-  function finish(save) {
-    if (done) return;
-    done = true;
-    var v = input.value.trim().slice(0, maxLen);
-    if (save && v) onCommit(v);
-    else renderSettings();
-  }
-  input.addEventListener('blur', function () { finish(true); });
-  input.addEventListener('keydown', function (e) {
-    if (e.key === 'Enter') { e.preventDefault(); input.blur(); }
-    else if (e.key === 'Escape') {
-      e.preventDefault();
-      e.stopPropagation();   // 别把整个设置面板一起关掉
-      finish(false);
-    }
-  });
-}
-
 function renderSettings() {
-  // 模板列表
-  tplList.innerHTML = '';
-  var ids = Object.keys(data.shifts);
-  if (!ids.length) tplList.appendChild(el('li', 'empty-row', '还没有模板 · 下面新建一套'));
-  ids.forEach(function (id) {
-    var t = data.shifts[id];
-    var li = el('li', 'row tpl-row');
-    var info = el('div', 'poolinfo');
-    var nm = el('div', 'rowtitle', t.name);
-    nm.title = '点名称可改名';
-    info.appendChild(nm);
-    info.appendChild(el('div', 'poolmeta', tplMeta(t)));
-
-    var use = el('button', 'ghost mini', '套用');
-    use.type = 'button';
-    use.addEventListener('click', function () { applyShift(id); });
-
-    var more = el('button', 'icon mini', '⋯');
-    more.type = 'button';
-    more.setAttribute('aria-label', '模板操作');
-    more.addEventListener('click', function () {
-      choose('「' + t.name + '」', [
-        { v: 'use', t: '套用为当前日程' },
-        { v: 'del', t: '删除模板', danger: true }
-      ], function (v) {
-        if (v === 'use') { applyShift(id); return; }
-        confirmBox('删除模板', '删除「' + t.name + '」？周期里引用它的天会一并移除。', '删除', function () {
-          delete data.shifts[id];
-          data.rotation.cycle = data.rotation.cycle.filter(function (x) { return x !== id; });
-          if (!data.rotation.cycle.length) data.rotation.active = false;
-          saveData();
-          view.date = shiftDateOf(new Date());
-          render();
-          showSheet(settingsSheet);
-          renderSettings();
-          toast('已删除模板');
-        }, settingsSheet);
-      });
-    });
-    nm.addEventListener('click', function () {
-      inlineRename(nm, 10, function (v) {
-        t.name = v;
-        saveData();
-        renderSettings();
-        updateHeader();
-        toast('模板已改名');
-      });
-    });
-
-    li.appendChild(info);
-    li.appendChild(use);
-    li.appendChild(more);
-    tplList.appendChild(li);
-  });
-
-  // 按天轮换
-  rotCycleEl.innerHTML = '';
-  if (!data.rotation.cycle.length) {
-    rotCycleEl.appendChild(el('span', 'rot-empty', '周期还是空的'));
-  } else {
-    data.rotation.cycle.forEach(function (id, idx) {
-      var label = id === 'rest' ? '休息' : (data.shifts[id] ? data.shifts[id].name : id);
-      var chip = el('span', 'rot-chip', label);
-      var x = el('button', 'rot-x', '✕');
-      x.type = 'button';
-      x.setAttribute('aria-label', '移除周期第 ' + (idx + 1) + ' 天');
-      x.addEventListener('click', function () {
-        data.rotation.cycle.splice(idx, 1);
-        afterRotChange();
-        toast('已移除一天');
-      });
-      chip.appendChild(x);
-      rotCycleEl.appendChild(chip);
-    });
-  }
-  if (document.activeElement !== rotAnchor) rotAnchor.value = data.rotation.anchorDate || '';
-  var on = rotationOn();
-  rotToggle.textContent = on ? '停用自动套用' : '启用自动套用';
-  rotToggle.classList.toggle('on', on);
-  rotHint.textContent = on
-    ? '自动套用已开启：每天按周期套用日程模板，「一天的起点」随日期变化'
-    : '启用后从起始日期起，按周期逐天自动套用日程模板';
   renderBackupWarn();
-  updateAdvSum();
   syncThemeUI();
 }
 
@@ -1917,92 +1761,6 @@ function renderBackupWarn() {
     ? '已有记录但还没导出过备份，建议先导出一份留底'
     : '已 ' + days + ' 天未导出备份，建议再导出一份';
 }
-
-/* 轮转改动后：守住合法性，回到今天，重绘轨道与设置 */
-function afterRotChange() {
-  if (!data.rotation.cycle.length || !data.rotation.anchorDate) data.rotation.active = false;
-  saveData();
-  view.date = shiftDateOf(new Date());
-  render();
-  scrollToNow(false);
-  renderSettings();
-}
-
-/* 一键套用：写 settings 并停用轮转（手动班次优先级最高） */
-function applyShift(id) {
-  var t = data.shifts[id];
-  if (!t) return;
-  var hadRot = data.rotation.active;
-  cfg().shiftName = t.name;
-  cfg().dayStart = t.dayStart;
-  data.rotation.active = false;
-  saveData();
-  view.date = shiftDateOf(new Date());
-  render();
-  scrollToNow(false);
-  renderSettings();
-  showSheet(settingsSheet);
-  toast(hadRot ? '已套用「' + t.name + '」，自动套用已停用' : '已套用「' + t.name + '」');
-  haptic();
-}
-
-tplForm.addEventListener('submit', function (e) {
-  e.preventDefault();
-  var name = tplName.value.trim().slice(0, 10);
-  if (!name) { tplName.focus(); return; }
-  var start = timeVal(tplStart.value);
-  if (start == null) { toast('请先选起点时间'); return; }
-  var dur = +tplDur.value;
-  if (!isFinite(dur) || dur < 60 || dur > 1440) dur = 720;
-  var id = 's' + Date.now().toString(36) + Math.random().toString(36).slice(2, 4);
-  data.shifts[id] = { name: name, dayStart: start, duration: dur };
-  saveData();
-  tplName.value = '';
-  renderSettings();
-  toast('已新建模板「' + name + '」');
-  haptic();
-});
-
-document.getElementById('rot-add').addEventListener('click', function () {
-  if (data.rotation.cycle.length >= 28) { toast('周期最多 28 天'); return; }
-  var opts = [{ v: 'rest', t: '休息日', hint: '00:00 起' }];
-  Object.keys(data.shifts).forEach(function (id) {
-    var t = data.shifts[id];
-    opts.push({ v: id, t: t.name, hint: fmt(t.dayStart) + ' 起' });
-  });
-  choose('周期里加一天', opts, function (v) {
-    if (data.rotation.cycle.length >= 28) { showSheet(settingsSheet); return; }
-    data.rotation.cycle.push(v);
-    afterRotChange();
-    showSheet(settingsSheet);
-    toast('已加入周期');
-  });
-});
-
-rotToggle.addEventListener('click', function () {
-  if (rotationOn()) {
-    data.rotation.active = false;
-    saveData();
-    view.date = shiftDateOf(new Date());
-    render();
-    scrollToNow(false);
-    renderSettings();
-    toast('已停用自动套用');
-    return;
-  }
-  if (!data.rotation.cycle.length) { toast('先在周期里加至少一天'); return; }
-  if (!data.rotation.anchorDate) data.rotation.anchorDate = todayKey();
-  data.rotation.active = true;
-  afterRotChange();
-  toast('自动套用已开启');
-  haptic();
-});
-
-rotAnchor.addEventListener('change', function () {
-  var v = rotAnchor.value;
-  data.rotation.anchorDate = /^\d{4}-\d{2}-\d{2}$/.test(v) ? v : '';
-  afterRotChange();
-});
 
 /* ===== 导出 / 导入 =====
  * 备份 = { app:'timerail', kind:'backup', exportedAt, data }
@@ -2046,6 +1804,69 @@ document.getElementById('export').addEventListener('click', function () {
   renderBackupWarn();
 });
 
+/* ===== 文本导出（P3.31）=====
+ * 给人看的版本：只导出记录页的内容（长文 + 速记），UTF-8 带 BOM、CRLF 换行，
+ * Windows 记事本打开不乱码。不能导回来，导入仍然只认 JSON 备份。
+ */
+function dayText(key) {
+  var d = parseKey(key);
+  if (!d) return '';
+  var rec = data.diary[key];
+  var logs = data.logs[key] || [];
+  var hasText = !!(rec && rec.text && rec.text.trim());
+  if (!hasText && !logs.length) return '';
+  var week = ['周日', '周一', '周二', '周三', '周四', '周五', '周六'][d.getDay()];
+  var out = ['微记 · ' + ymd(d) + ' ' + week + ' · ' + shiftOf(key).name];
+  if (hasText) {
+    out.push('');
+    out.push('【记录】');
+    out.push(rec.text);
+  }
+  if (logs.length) {
+    out.push('');
+    out.push('【速记】');
+    logs.forEach(function (lg) {
+      var t = new Date(lg.createdAt);
+      var clock = isNaN(t.getTime()) ? '' : pad(t.getHours()) + ':' + pad(t.getMinutes()) + '  ';
+      out.push(clock + logMeta(lg.type, lg).label + '  ' + lg.text);
+    });
+  }
+  return out.join('\n');
+}
+
+function downloadText(name, text) {
+  var blob = new Blob(['\ufeff' + text.replace(/\n/g, '\r\n')], { type: 'text/plain;charset=utf-8' });
+  var url = URL.createObjectURL(blob);
+  var a = document.createElement('a');
+  a.href = url;
+  a.download = name;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  setTimeout(function () { URL.revokeObjectURL(url); }, 1000);
+}
+
+document.getElementById('export-txt').addEventListener('click', function () {
+  var key = viewKey();
+  var text = dayText(key);
+  if (!text) { toast('这一天还没有记录'); return; }
+  downloadText('微记-' + key + '.txt', text);
+  toast('已导出文本');
+  haptic();
+});
+
+document.getElementById('export-all-txt').addEventListener('click', function () {
+  var seen = {};
+  Object.keys(data.diary).forEach(function (k) { seen[k] = 1; });
+  Object.keys(data.logs).forEach(function (k) { seen[k] = 1; });
+  var keys = Object.keys(seen).filter(function (k) { return !!dayText(k); }).sort();
+  if (!keys.length) { toast('还没有任何记录'); return; }
+  var parts = keys.map(dayText);
+  downloadText('微记-全部记录-' + ymd(new Date()) + '.txt', parts.join('\n\n──────────\n\n'));
+  toast('已导出 ' + keys.length + ' 天的记录');
+  haptic();
+});
+
 document.getElementById('import').addEventListener('click', function () {
   importFile.value = '';   // 允许连续导入同一个文件
   importFile.click();
@@ -2062,7 +1883,7 @@ importFile.addEventListener('change', function () {
     var s = backupCounts(next);
     confirmBox('导入备份',
       '将覆盖本机数据：' + s.days + ' 天 · ' + s.items + ' 条事项 · ' + s.logs + ' 条小记 · ' +
-      s.diary + ' 篇长文 · ' + s.shifts + ' 个模板 · 顺延池 ' + s.pool + ' 条。当前数据会被替换，不可撤销。',
+      s.diary + ' 篇长文 · 顺延池 ' + s.pool + ' 条。当前数据会被替换，不可撤销。',
       '覆盖导入', function () {
         data = next;
         saveData();
@@ -2269,7 +2090,7 @@ document.getElementById('styleseg').addEventListener('click', function (e) {
 
 document.getElementById('startseg').addEventListener('click', function (e) {
   var b = e.target.closest('button');
-  if (!b || rotationOn()) return;
+  if (!b) return;
   if (b.dataset.start === 'custom') {
     startCustomMode = true;
     syncStartUI();
@@ -2286,7 +2107,6 @@ document.getElementById('startseg').addEventListener('click', function (e) {
 });
 
 startCustom.addEventListener('change', function () {
-  if (rotationOn()) return;
   var t = timeVal(startCustom.value);
   if (t == null) { toast('时间格式不对'); return; }
   startCustomMode = false;
@@ -2296,13 +2116,6 @@ startCustom.addEventListener('change', function () {
   render();
   scrollToNow(true);
   renderSheet();
-});
-
-advToggle.addEventListener('click', function () {
-  var open = advBody.hidden;
-  advBody.hidden = !open;
-  advToggle.setAttribute('aria-expanded', open ? 'true' : 'false');
-  advToggle.classList.toggle('open', open);
 });
 
 document.getElementById('themeseg').addEventListener('click', function (e) {
@@ -2318,7 +2131,6 @@ document.getElementById('themeseg').addEventListener('click', function (e) {
 });
 
 shiftInput.addEventListener('input', function () {
-  if (rotationOn()) return;
   cfg().shiftName = shiftInput.value.trim();
   saveData();
   document.getElementById('sub-label').textContent =
@@ -2326,7 +2138,7 @@ shiftInput.addEventListener('input', function () {
 });
 
 document.getElementById('reset').addEventListener('click', function () {
-  confirmBox('清空全部数据', '将删除所有日期的事项、日程模板与全部设置，且不可恢复。', '全部清空', function () {
+  confirmBox('清空全部数据', '将删除所有日期的事项、小记、长文与全部设置，且不可恢复。', '全部清空', function () {
     data = defaultData();
     saveData();
     applyTheme();
@@ -2474,13 +2286,13 @@ var isDemo = false, forceOnboard = false;
     if (q.has('g') && ROW_H[+q.get('g')]) cfg().granularity = +q.get('g');
     if (q.has('start')) {
       var s = +q.get('start');
-      if (s >= 0 && s < 1440) { cfg().dayStart = s; data.rotation.active = false; }
+      if (s >= 0 && s < 1440) cfg().dayStart = s;
     }
     if (q.has('now')) {
       var n = +q.get('now');
       if (n >= 0 && n < 1440) fakeNow = n;
     }
-    if (q.get('name')) { cfg().shiftName = q.get('name').slice(0, 10); data.rotation.active = false; }
+    if (q.get('name')) cfg().shiftName = q.get('name').slice(0, 10);
     if (SHAPES[q.get('style')]) cfg().trackStyle = q.get('style');
     if (q.get('o') === 'h' || q.get('o') === 'v') cfg().orientation = q.get('o');
     if (q.get('onboard') === '1') forceOnboard = true;
