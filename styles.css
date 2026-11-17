@@ -785,6 +785,98 @@ body.horiz .hint {
 }
 .log-del:active { background: var(--orange-bg); color: var(--orange-ink); }
 
+/* ===== 记录页（P3.30）=====
+ * 整页从左侧滑入，右滑打开时跟手；顶部同样留 64px 安全垫，避开 iOS 主屏的
+ * 低比例栅格化带（与 .topbar 同理）。 */
+.diary-page {
+  position: fixed;
+  inset: 0;
+  z-index: 70;
+  display: flex;
+  flex-direction: column;
+  background: var(--bg);
+  transform: translateX(-100%);
+  visibility: hidden;
+  transition: transform .26s cubic-bezier(.22,.61,.36,1), visibility .26s;
+}
+.diary-page.open { transform: translateX(0); visibility: visible; }
+.diary-page.dragging { transition: none; }
+
+.diary-top {
+  flex: none;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: calc(64px + env(safe-area-inset-top)) 8px 8px;
+  background: var(--bg);
+  border-bottom: 1px solid var(--line-soft);
+}
+.diary-head { flex: 1; min-width: 0; padding: 0 2px; }
+.diary-title { font-size: 16px; font-weight: 600; line-height: 22px; }
+.diary-sub {
+  font-size: 12px; line-height: 18px; color: var(--muted); margin-top: 2px;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.diary-saved {
+  flex: none; padding-right: 6px;
+  font-size: 11px; color: var(--muted-2);
+  font-variant-numeric: tabular-nums;
+}
+
+.diary-body {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  width: 100%;
+  max-width: 480px;
+  margin: 0 auto;
+  padding: 14px 16px calc(14px + env(safe-area-inset-bottom));
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+.diary-write { flex: 1 1 auto; min-height: 210px; display: flex; flex-direction: column; }
+#diary-input {
+  flex: 1;
+  width: 100%;
+  min-height: 170px;
+  padding: 13px 14px;
+  border-radius: 14px;
+  border: 1px solid var(--line);
+  background: var(--panel-2);
+  color: var(--text);
+  font-family: inherit;
+  font-size: 16px;
+  line-height: 1.7;
+  resize: none;
+  outline: none;
+  -webkit-appearance: none;
+}
+#diary-input:focus { border-color: var(--focus-line); }
+#diary-input::placeholder { color: var(--muted-2); }
+.diary-meta {
+  display: flex; justify-content: space-between;
+  margin-top: 6px;
+  font-size: 11px; color: var(--muted-2);
+  font-variant-numeric: tabular-nums;
+}
+
+.diary-quick { flex: none; }
+.diary-qhead {
+  display: flex; align-items: center; justify-content: space-between;
+  margin-bottom: 4px;
+}
+.diary-qhead > span { font-size: 13px; font-weight: 500; color: var(--text-2); }
+.diary-logs { list-style: none; }
+.diary-logs .row { padding: 8px 0; }
+.diary-logs .empty-row { padding: 14px 0; }
+
+/* 从记录页打开小记面板时，把它抬到记录页之上 */
+body.sheet-over-diary .sheet { z-index: 80; }
+body.sheet-over-diary #backdrop { z-index: 75; }
+body.sheet-over-diary .modal { z-index: 90; }
+
 /* 小记类型弹窗 */
 .modal {
   position: fixed; inset: 0; z-index: 60;

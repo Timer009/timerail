@@ -66,6 +66,8 @@
  *   - P3.28：安全垫里加一条极淡的轨道曲线作品牌带（纯图形、无文字，指针穿透）
  *   - P3.29：演示数据换成大众日常事项（晨跑/早饭/周报/邮件/整理桌面），
  *           不再出现行业场景词
+ *   - P3.30：记录页 —— 顶栏右滑（跟手）或底栏「记录」打开；上半是当天长文，
+ *           边写边存，下半是当天速记，可直接补记一条
  */
 (function () {
 'use strict';
@@ -113,7 +115,8 @@ function defaultData() {
     rotation: { cycle: [], anchorDate: '', active: false }, // P3：轮转规则
     days: {},
     pool: [],                                               // P2：顺延池
-    logs: {}                                                // P3.6：今日小记（按班次日归属）
+    logs: {},                                               // P3.6：今日小记（按班次日归属）
+    diary: {}                                               // P3.30：记录页长文 { 日期: { text, updatedAt } }
   };
 }
 function snapG(v) { v = +v; return (v === 30 || v === 60 || v === 120) ? v : 60; }
@@ -285,6 +288,21 @@ function normalize(d) {
       return out;
     }).filter(Boolean).slice(-100);
     if (!d.logs[k].length) delete d.logs[k];
+  });
+  // 记录页长文（P3.30）：按日期存一篇，空文本丢弃，单篇上限 5000 字
+  if (!d.diary || typeof d.diary !== 'object' || Array.isArray(d.diary)) d.diary = {};
+  Object.keys(d.diary).forEach(function (k) {
+    var r = d.diary[k];
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(k) || !r || typeof r !== 'object' || typeof r.text !== 'string') {
+      delete d.diary[k];
+      return;
+    }
+    var dtxt = r.text.slice(0, 5000);
+    if (!dtxt.trim()) { delete d.diary[k]; return; }
+    d.diary[k] = {
+      text: dtxt,
+      updatedAt: typeof r.updatedAt === 'string' ? r.updatedAt : iso()
+    };
   });
   Object.keys(d.days).forEach(function (k) {
     var day = d.days[k];
@@ -519,6 +537,14 @@ var logList = document.getElementById('log-list');
 var logForm = document.getElementById('log-form');
 var logInput = document.getElementById('log-input');
 var logLink = document.getElementById('log-link');
+var diaryPage = document.getElementById('diary-page');
+var diaryInput = document.getElementById('diary-input');
+var diaryCount = document.getElementById('diary-count');
+var diarySaved = document.getElementById('diary-saved');
+var diarySub = document.getElementById('diary-sub');
+var diaryLogs = document.getElementById('diary-logs');
+var dqForm = document.getElementById('dq-form');
+var dqInput = document.getElementById('dq-input');
 var importFile = document.getElementById('import-file');
 var installBtn = document.getElementById('install');
 
@@ -995,7 +1021,7 @@ function updateHeader() {
   poolLink.hidden = !pn;
   poolLink.textContent = '顺延池 ' + pn;
   var ln = logCount(viewKey());
-  logLink.textContent = ln ? '小记 ' + ln : '小记';
+  logLink.textContent = ln ? '记录 ' + ln : '记录';
 
   Array.prototype.forEach.call(document.querySelectorAll('#gseg button'), function (b) {
     b.classList.toggle('active', +b.dataset.g === cfg().granularity);
@@ -1046,6 +1072,7 @@ function hideSheet() {
   }
   activeSheet = null;
   backdrop.classList.remove('open');
+  document.body.classList.remove('sheet-over-diary');
 }
 
 function openBlock(i) {
@@ -1556,6 +1583,194 @@ logForm.addEventListener('submit', function (e) {
   haptic();
 });
 
+/* ===== 记录页（P3.30）=====
+ * 数据：data.diary[dateKey] = { text, updatedAt }，与事项/小记一样按查看日归属。
+ * 打开：顶栏上向右拖（跟手滑入）或底栏「记录」；关闭：左上 ‹、顶栏左滑、Esc。
+ * 上半是长文，输入后 0.5 秒自动存；下半是当天速记，末尾可直接补记一条。
+ */
+var diaryOpen = false;
+var diaryTimer = null;
+
+function diaryRec(key) { return data.diary[key]; }
+
+function updateDiaryCount() {
+  diaryCount.textContent = diaryInput.value.length + ' / 5000 字';
+}
+
+function saveDiary() {
+  if (diaryTimer) { clearTimeout(diaryTimer); diaryTimer = null; }
+  var key = viewKey();
+  var text = diaryInput.value.slice(0, 5000);
+  var cur = diaryRec(key);
+  if (!text.trim()) {
+    if (cur) { delete data.diary[key]; saveData(); }
+    diarySaved.textContent = '';
+    return;
+  }
+  if (!cur || cur.text !== text) {
+    data.diary[key] = { text: text, updatedAt: iso() };
+    saveData();
+  }
+  diarySaved.textContent = '已保存 ' + fmt(nowMin());
+}
+
+function renderDiaryLogs() {
+  var key = viewKey();
+  var list = data.logs[key] || [];
+  diaryLogs.innerHTML = '';
+  if (!list.length) {
+    diaryLogs.appendChild(el('li', 'empty-row', '今天还没有速记，下面记一句'));
+    return;
+  }
+  list.forEach(function (lg) {
+    var meta = logMeta(lg.type, lg);
+    var li = el('li', 'row log-row');
+    li.appendChild(el('span', 'log-badge ' + meta.cls, meta.label));
+    var body = el('div', 'log-body');
+    body.appendChild(el('div', 'log-text', lg.text));
+    var t = new Date(lg.createdAt);
+    var clock = isNaN(t.getTime()) ? '' : pad(t.getHours()) + ':' + pad(t.getMinutes());
+    body.appendChild(el('div', 'log-time', clock ? clock + ' 记录' : '记录'));
+    li.appendChild(body);
+    diaryLogs.appendChild(li);
+  });
+}
+
+function renderDiary() {
+  var key = viewKey();
+  var rec = diaryRec(key);
+  diaryInput.value = rec ? rec.text : '';
+  diarySub.textContent = fmtDay(key) + ' · ' + shiftOf(key).name;
+  diarySaved.textContent = rec ? '已保存' : '';
+  dqInput.value = '';
+  updateDiaryCount();
+  renderDiaryLogs();
+}
+
+function openDiary() {
+  renderDiary();
+  diaryPage.classList.remove('dragging');
+  diaryPage.style.transform = '';
+  diaryPage.classList.add('open');
+  diaryPage.setAttribute('aria-hidden', 'false');
+  diaryOpen = true;
+  haptic();
+}
+
+function closeDiary() {
+  if (diaryOpen) saveDiary();   // 手势中途取消时还没渲染过，不能拿旧内容回写
+  diaryPage.classList.remove('dragging');
+  diaryPage.style.transform = '';
+  diaryPage.classList.remove('open');
+  diaryPage.setAttribute('aria-hidden', 'true');
+  diaryOpen = false;
+}
+
+diaryInput.addEventListener('input', function () {
+  updateDiaryCount();
+  diarySaved.textContent = '输入中…';
+  if (diaryTimer) clearTimeout(diaryTimer);
+  diaryTimer = setTimeout(saveDiary, 500);
+});
+diaryInput.addEventListener('blur', saveDiary);
+
+document.getElementById('diary-close').addEventListener('click', closeDiary);
+document.getElementById('diary-manage').addEventListener('click', function () {
+  // 小记面板要浮在记录页之上
+  document.body.classList.add('sheet-over-diary');
+  openLog();
+});
+
+dqForm.addEventListener('submit', function (e) {
+  e.preventDefault();
+  var text = dqInput.value.trim().slice(0, 80);
+  if (!text) { dqInput.focus(); return; }
+  var key = viewKey();
+  if (!data.logs[key]) data.logs[key] = [];
+  if (data.logs[key].length >= 100) { toast('这天的小记已经记满 100 条'); return; }
+  data.logs[key].push({
+    id: 'lg' + Date.now().toString(36) + Math.random().toString(36).slice(2, 4),
+    type: 'highlight',
+    text: text,
+    createdAt: iso()
+  });
+  saveData();
+  dqInput.value = '';
+  renderDiaryLogs();
+  updateHeader();
+  toast('已记下');
+  haptic();
+});
+
+/* 顶栏右滑打开：先判断方向，再跟手；松手超过屏宽 30% 停在开的位置。
+ * 起手避开最左 18px（Safari 的边缘返回手势）；顶栏之外不接管，轨道滚动不受影响。 */
+var swipeState = { on: false, moved: false, x: 0, y: 0, dx: 0, W: 0 };
+var topbarEl = document.querySelector('.topbar');
+
+function suppressClick() {
+  var block = function (e) { e.preventDefault(); e.stopPropagation(); };
+  document.addEventListener('click', block, true);
+  setTimeout(function () { document.removeEventListener('click', block, true); }, 400);
+}
+
+topbarEl.addEventListener('touchstart', function (e) {
+  if (diaryOpen || activeSheet || !e.touches || e.touches.length !== 1) return;
+  var t = e.touches[0];
+  if (t.clientX < 18) return;
+  swipeState.on = true;
+  swipeState.moved = false;
+  swipeState.x = t.clientX;
+  swipeState.y = t.clientY;
+  swipeState.dx = 0;
+  swipeState.W = window.innerWidth || 360;
+}, { passive: true });
+
+topbarEl.addEventListener('touchmove', function (e) {
+  if (!swipeState.on) return;
+  var t = e.touches[0];
+  var dx = t.clientX - swipeState.x, dy = t.clientY - swipeState.y;
+  if (!swipeState.moved) {
+    if (Math.abs(dx) < 10 && Math.abs(dy) < 10) return;
+    if (dx <= 0 || dx < Math.abs(dy)) { swipeState.on = false; return; }   // 不是向右横划
+    swipeState.moved = true;
+    diaryPage.classList.add('dragging', 'open');
+    diaryPage.setAttribute('aria-hidden', 'false');
+  }
+  swipeState.dx = Math.max(0, dx);
+  diaryPage.style.transform =
+    'translateX(' + (Math.min(swipeState.dx, swipeState.W) - swipeState.W) + 'px)';
+  e.preventDefault();
+}, { passive: false });
+
+function endSwipe() {
+  if (!swipeState.on) return;
+  swipeState.on = false;
+  if (!swipeState.moved) return;
+  swipeState.moved = false;
+  suppressClick();
+  if (swipeState.dx > swipeState.W * 0.3) openDiary();
+  else closeDiary();
+}
+topbarEl.addEventListener('touchend', endSwipe);
+topbarEl.addEventListener('touchcancel', endSwipe);
+
+/* 记录页顶栏左滑关闭 */
+var diaryTopEl = document.querySelector('.diary-top');
+var diarySwipe = null;
+diaryTopEl.addEventListener('touchstart', function (e) {
+  if (!diaryOpen || !e.touches || e.touches.length !== 1) { diarySwipe = null; return; }
+  diarySwipe = { x: e.touches[0].clientX, y: e.touches[0].clientY };
+}, { passive: true });
+diaryTopEl.addEventListener('touchend', function (e) {
+  if (!diarySwipe) return;
+  var t = e.changedTouches && e.changedTouches[0];
+  var s = diarySwipe;
+  diarySwipe = null;
+  if (!t) return;
+  var dx = t.clientX - s.x, dy = t.clientY - s.y;
+  if (dx < -50 && Math.abs(dx) > Math.abs(dy)) closeDiary();
+});
+
 /* ===== 班次模板 / 轮转（设置面板） ===== */
 function timeVal(v) {
   var m = /^(\d{1,2}):(\d{2})$/.exec(v || '');
@@ -1800,7 +2015,8 @@ function backupCounts(d) {
     items += (d.days[k].items || []).length;
   });
   Object.keys(d.logs || {}).forEach(function (k) { logs += d.logs[k].length; });
-  return { days: days, items: items, logs: logs, shifts: Object.keys(d.shifts || {}).length, pool: (d.pool || []).length };
+  return { days: days, items: items, logs: logs, diary: Object.keys(d.diary || {}).length,
+    shifts: Object.keys(d.shifts || {}).length, pool: (d.pool || []).length };
 }
 
 function parseBackup(text) {
@@ -1846,7 +2062,7 @@ importFile.addEventListener('change', function () {
     var s = backupCounts(next);
     confirmBox('导入备份',
       '将覆盖本机数据：' + s.days + ' 天 · ' + s.items + ' 条事项 · ' + s.logs + ' 条小记 · ' +
-      s.shifts + ' 个模板 · 顺延池 ' + s.pool + ' 条。当前数据会被替换，不可撤销。',
+      s.diary + ' 篇长文 · ' + s.shifts + ' 个模板 · 顺延池 ' + s.pool + ' 条。当前数据会被替换，不可撤销。',
       '覆盖导入', function () {
         data = next;
         saveData();
@@ -1998,7 +2214,7 @@ document.getElementById('pool-link').addEventListener('click', function () {
   renderPool();
   showSheet(poolSheet);
 });
-document.getElementById('log-link').addEventListener('click', openLog);
+document.getElementById('log-link').addEventListener('click', openDiary);
 document.getElementById('log-close').addEventListener('click', hideSheet);
 backdrop.addEventListener('click', hideSheet);
 document.addEventListener('keydown', function (e) {
@@ -2006,7 +2222,8 @@ document.addEventListener('keydown', function (e) {
   if (!logTypeModal.hidden) { closeLogTypeDialog(); return; }
   if (!calEl.hidden) { closeCal(); return; }
   if (!onboardEl.hidden) { closeOnboarding(true); return; }
-  hideSheet();
+  if (activeSheet) { hideSheet(); return; }
+  if (diaryOpen) { closeDiary(); return; }
 });
 document.getElementById('storebar-retry').addEventListener('click', function () {
   saveData();

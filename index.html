@@ -27,10 +27,10 @@
   if (m) m.setAttribute('content', light ? '#f5f8fc' : '#0e131f');
 })();
 </script>
-<link rel="manifest" href="manifest.webmanifest?v=p3.29">
+<link rel="manifest" href="manifest.webmanifest?v=p3.30">
 <link rel="icon" type="image/png" sizes="192x192" href="icon-192.png">
 <link rel="apple-touch-icon" href="apple-touch-icon.png">
-<link rel="stylesheet" href="styles.css?v=p3.29">
+<link rel="stylesheet" href="styles.css?v=p3.30">
 </head>
 <body>
 
@@ -94,6 +94,38 @@
     </div>
   </div>
 </footer>
+
+<!-- 记录页（P3.30）：顶栏右滑或点底栏「记录」打开。上面写当天长文，下面是当天速记 -->
+<section class="diary-page" id="diary-page" aria-hidden="true">
+  <div class="diary-top">
+    <button class="icon" id="diary-close" aria-label="返回轨道">‹</button>
+    <div class="diary-head">
+      <div class="diary-title">今日记录</div>
+      <div class="diary-sub" id="diary-sub">—</div>
+    </div>
+    <div class="diary-saved" id="diary-saved"></div>
+  </div>
+  <div class="diary-body">
+    <div class="diary-write">
+      <textarea id="diary-input" maxlength="5000" placeholder="今天过得怎么样？写长一点也行，随手一句也行…"></textarea>
+      <div class="diary-meta">
+        <span id="diary-count">0 / 5000 字</span>
+        <span class="diary-hint">边写边存，不用点保存</span>
+      </div>
+    </div>
+    <div class="diary-quick">
+      <div class="diary-qhead">
+        <span>今日速记</span>
+        <button type="button" class="ghost mini" id="diary-manage">分类 / 删除</button>
+      </div>
+      <ul class="diary-logs" id="diary-logs"></ul>
+      <form class="addbar" id="dq-form">
+        <input id="dq-input" type="text" maxlength="80" placeholder="速记一句，如：今天终于跑完 5 公里" autocomplete="off">
+        <button class="primary" type="submit">记</button>
+      </form>
+    </div>
+  </div>
+</section>
 
 <div id="backdrop"></div>
 
@@ -293,11 +325,11 @@
         <input type="file" id="import-file" accept=".json,application/json" hidden>
       </div>
       <div class="backup-warn" id="backup-warn" hidden></div>
-      <div class="field-hint">备份包含所有日期、事项、顺延池、日程模板与小记；导入会覆盖本机数据，建议先导出。</div>
+      <div class="field-hint">备份包含所有日期、事项、顺延池、日程模板、小记与记录页长文；导入会覆盖本机数据，建议先导出。</div>
       <button type="button" class="ghost danger" id="reset">清空全部数据</button>
     </div>
 
-    <div class="note">数据仅保存在本机浏览器中 · 版本 P3.29 (2026-11-16)</div>
+    <div class="note">数据仅保存在本机浏览器中 · 版本 P3.30 (2026-11-18)</div>
   </div>
 </section>
 
@@ -319,6 +351,6 @@
 </div>
 
 <div id="toast"></div>
-<script src="app.js?v=p3.29"></script>
+<script src="app.js?v=p3.30"></script>
 </body>
 </html>
