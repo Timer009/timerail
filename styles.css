@@ -839,6 +839,33 @@ body.horiz .hint {
 }
 .log-del:active { background: var(--orange-bg); color: var(--orange-ink); }
 
+/* 小记批量选择（P3.35）：面板标题右侧「选择」，选中行左侧出现勾选圆点 */
+.sheet-acts { flex: none; display: flex; align-items: center; gap: 4px; }
+.selbar {
+  display: flex; align-items: center; gap: 10px;
+  padding-top: 12px;
+}
+.selbar[hidden],
+#log-type-row[hidden],
+#log-form[hidden] { display: none; }
+.selcount {
+  flex: 1; text-align: center;
+  font-size: 12px; color: var(--muted);
+  font-variant-numeric: tabular-nums;
+}
+.sel-check {
+  flex: none;
+  width: 22px; height: 22px;
+  margin-top: 1px;
+  border-radius: 50%;
+  border: 2px solid var(--node-todo-line);
+  color: transparent;
+  font-size: 12px; font-weight: 700;
+  display: flex; align-items: center; justify-content: center;
+}
+.log-row.picked .sel-check { background: var(--done); border-color: var(--done); color: var(--done-ink); }
+.log-row.picked .log-text { color: var(--muted); }
+
 /* ===== 记录页（P3.30）=====
  * 整页从左侧滑入，右滑打开时跟手；顶部同样留 64px 安全垫，避开 iOS 主屏的
  * 低比例栅格化带（与 .topbar 同理）。 */
@@ -889,11 +916,11 @@ body.horiz .hint {
   overflow-y: auto;
   overscroll-behavior: contain;
 }
-.diary-write { flex: 1 1 auto; min-height: 210px; display: flex; flex-direction: column; }
+.diary-write { flex: 1 1 auto; min-height: 50vh; display: flex; flex-direction: column; }
 #diary-input {
   flex: 1;
   width: 100%;
-  min-height: 170px;
+  min-height: 46vh;
   padding: 13px 14px;
   border-radius: 14px;
   border: 1px solid var(--line);

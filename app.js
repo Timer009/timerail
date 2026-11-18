@@ -76,6 +76,8 @@
  *           图标（铅笔 / 轨道折线），安全线下方的浮动提示删除
  *   - P3.34：滑条整体放大（轨高 44 / 圆钮 40 / 图标 20 / 文字 14px）并缩短
  *           （左右边距 36px，不贴屏幕两边）；iOS 顶部发虚经实机确认放弃处理
+ *   - P3.35：记录页长文区至少半屏，速记再多也不压缩写作空间；小记面板加
+ *           批量选择（右上「选择」→ 勾选 / 全选 → 底部一次删除）
  */
 (function () {
 'use strict';
@@ -519,6 +521,12 @@ var logTabs = document.getElementById('log-tabs');
 var logList = document.getElementById('log-list');
 var logForm = document.getElementById('log-form');
 var logInput = document.getElementById('log-input');
+var logSelectBtn = document.getElementById('log-select');
+var logSelBar = document.getElementById('log-selbar');
+var logSelCount = document.getElementById('log-selcount');
+var logSelAllBtn = document.getElementById('log-selall');
+var logSelDelBtn = document.getElementById('log-seldel');
+var logTypeRow = document.getElementById('log-type-row');
 var logLink = document.getElementById('log-link');
 var diaryPage = document.getElementById('diary-page');
 var diaryInput = document.getElementById('diary-input');
@@ -1028,11 +1036,14 @@ function showSheet(s) {
     activeSheet.setAttribute('aria-hidden', 'true');
   }
   activeSheet = s;
+  // 选择态在 hideSheet 里会重置，重开小记面板时重建行，避免残留勾选
+  if (s === logSheet) renderLog();
   s.classList.add('open');
   s.setAttribute('aria-hidden', 'false');
   backdrop.classList.add('open');
 }
 function hideSheet() {
+  if (logSelMode) { logSelMode = false; logSelIds = {}; }
   if (activeSheet) {
     activeSheet.classList.remove('open');
     activeSheet.setAttribute('aria-hidden', 'true');
@@ -1408,6 +1419,38 @@ function renderLogTabs() {
   }
 }
 
+/* 批量选择（P3.35）：面板右上「选择」进入，行左侧出现勾选点，底部一次删除 */
+var logSelMode = false;
+var logSelIds = {};
+
+function logSelList() { return data.logs[viewKey()] || []; }
+
+function logSelPicked() {
+  var n = 0;
+  logSelList().forEach(function (lg) { if (logSelIds[lg.id]) n++; });
+  return n;
+}
+
+function syncLogSelUI() {
+  var list = logSelList();
+  var n = logSelPicked();
+  logSelectBtn.textContent = logSelMode ? '完成' : '选择';
+  logSelectBtn.setAttribute('aria-label', logSelMode ? '退出批量选择' : '批量选择小记');
+  logSelectBtn.disabled = !list.length;
+  logSelBar.hidden = !logSelMode;
+  logTypeRow.hidden = logSelMode;
+  logForm.hidden = logSelMode;
+  logSelCount.textContent = '已选 ' + n + ' 条';
+  logSelDelBtn.disabled = !n;
+  logSelAllBtn.textContent = (n > 0 && n === list.length) ? '取消全选' : '全选';
+}
+
+function toggleLogPick(id) {
+  if (logSelIds[id]) delete logSelIds[id]; else logSelIds[id] = 1;
+  renderLog();
+  haptic();
+}
+
 function renderLog() {
   var key = viewKey();
   if (logType === 'custom' && !data.settings.logCustom) logType = 'highlight';
@@ -1418,15 +1461,30 @@ function renderLog() {
   logInput.placeholder = logType === 'review' ? '哪里可以更好一点…'
     : (logType === 'custom' ? '随手记一句…' : '今天有什么值得记住的…');
 
-  logList.innerHTML = '';
   var list = data.logs[key] || [];
+  // 列表空了就自动退出选择态；顺手清掉已不存在条目的选中标记
+  if (logSelMode) {
+    if (!list.length) { logSelMode = false; logSelIds = {}; }
+    else {
+      var alive = {};
+      list.forEach(function (lg) { if (logSelIds[lg.id]) alive[lg.id] = 1; });
+      logSelIds = alive;
+    }
+  }
+
+  logList.innerHTML = '';
   if (!list.length) {
     logList.appendChild(el('li', 'empty-row', '还没有小记，记一句也算数'));
+    syncLogSelUI();
     return;
   }
   list.forEach(function (lg) {
     var meta = logMeta(lg.type, lg);
     var li = el('li', 'row log-row');
+    if (logSelMode) {
+      if (logSelIds[lg.id]) li.className += ' picked';
+      li.appendChild(el('span', 'sel-check', '✓'));
+    }
     li.appendChild(el('span', 'log-badge ' + meta.cls, meta.label));
     var body = el('div', 'log-body');
     body.appendChild(el('div', 'log-text', lg.text));
@@ -1435,28 +1493,69 @@ function renderLog() {
     body.appendChild(el('div', 'log-time', clock ? clock + ' 记录' : '记录'));
     li.appendChild(body);
 
-    var x = el('button', 'log-del', '✕');
-    x.type = 'button';
-    x.setAttribute('aria-label', '删除这条小记');
-    x.addEventListener('click', function () {
-      confirmBox('删除小记', '删除「' + lg.text.slice(0, 20) + '」？只删这条记录。', '删除', function () {
-        data.logs[key] = (data.logs[key] || []).filter(function (o) { return o.id !== lg.id; });
-        if (!data.logs[key].length) delete data.logs[key];
-        saveData();
-        renderLog();
-        updateHeader();
-        showSheet(logSheet);
-        toast('已删除小记');
-        haptic();
-      }, logSheet);
-    });
-    li.appendChild(x);
+    if (logSelMode) {
+      li.addEventListener('click', function () { toggleLogPick(lg.id); });
+    } else {
+      var x = el('button', 'log-del', '✕');
+      x.type = 'button';
+      x.setAttribute('aria-label', '删除这条小记');
+      x.addEventListener('click', function () {
+        confirmBox('删除小记', '删除「' + lg.text.slice(0, 20) + '」？只删这条记录。', '删除', function () {
+          data.logs[key] = (data.logs[key] || []).filter(function (o) { return o.id !== lg.id; });
+          if (!data.logs[key].length) delete data.logs[key];
+          saveData();
+          renderLog();
+          renderDiaryLogs();
+          updateHeader();
+          showSheet(logSheet);
+          toast('已删除小记');
+          haptic();
+        }, logSheet);
+      });
+      li.appendChild(x);
+    }
     logList.appendChild(li);
   });
+  syncLogSelUI();
 }
 
-function openLog() {
+logSelectBtn.addEventListener('click', function () {
+  logSelMode = !logSelMode;
+  logSelIds = {};
   renderLog();
+  haptic();
+});
+
+logSelAllBtn.addEventListener('click', function () {
+  var list = logSelList();
+  var all = list.length > 0 && logSelPicked() === list.length;
+  logSelIds = {};
+  if (!all) list.forEach(function (lg) { logSelIds[lg.id] = 1; });
+  renderLog();
+  haptic();
+});
+
+logSelDelBtn.addEventListener('click', function () {
+  var ids = Object.keys(logSelIds);
+  if (!ids.length) return;
+  var n = ids.length;
+  confirmBox('删除小记', '删除选中的 ' + n + ' 条小记？此操作不可撤销。', '删除', function () {
+    var key = viewKey();
+    data.logs[key] = (data.logs[key] || []).filter(function (o) { return ids.indexOf(o.id) < 0; });
+    if (!data.logs[key].length) delete data.logs[key];
+    logSelMode = false;
+    logSelIds = {};
+    saveData();
+    renderLog();
+    renderDiaryLogs();
+    updateHeader();
+    showSheet(logSheet);
+    toast('已删除 ' + n + ' 条小记');
+    haptic();
+  }, logSheet);
+});
+
+function openLog() {
   showSheet(logSheet);
   logList.scrollTop = logList.scrollHeight;
 }
@@ -1545,6 +1644,7 @@ logForm.addEventListener('submit', function (e) {
   saveData();
   logInput.value = '';
   renderLog();
+  renderDiaryLogs();
   updateHeader();
   logList.scrollTop = logList.scrollHeight;
   haptic();
