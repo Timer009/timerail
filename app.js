@@ -70,6 +70,8 @@
  *           边写边存，下半是当天速记，可直接补记一条
  *   - P3.31：删掉「进阶 · 多套日程」，起点回到设置里手选；小记页签移到输入框
  *           上方并标「记成」；新增文本导出（当天 / 全部，UTF-8 txt，不可导回）
+ *   - P3.32：顶部滑条 —— 住进 64px 安全线（发虚区只放图形、不放文字），圆钮
+ *           拖过半松手切页，记录页带内镜像滑条返回；P3.30 的隐形滑动手势删除
  */
 (function () {
 'use strict';
@@ -1544,9 +1546,10 @@ logForm.addEventListener('submit', function (e) {
   haptic();
 });
 
-/* ===== 记录页（P3.30）=====
+/* ===== 记录页（P3.30 / P3.32）=====
  * 数据：data.diary[dateKey] = { text, updatedAt }，与事项/小记一样按查看日归属。
- * 打开：顶栏上向右拖（跟手滑入）或底栏「记录」；关闭：左上 ‹、顶栏左滑、Esc。
+ * 打开：顶部安全带内滑条（P3.32，圆钮拖过半松手）或底栏「记录」；关闭：记录页
+ * 带内反向滑条、左上 ‹、Esc。页面不跟手——滑入的页面会盖住拖动的圆钮，同关机滑条。
  * 上半是长文，输入后 0.5 秒自动存；下半是当天速记，末尾可直接补记一条。
  */
 var diaryOpen = false;
@@ -1610,8 +1613,6 @@ function renderDiary() {
 
 function openDiary() {
   renderDiary();
-  diaryPage.classList.remove('dragging');
-  diaryPage.style.transform = '';
   diaryPage.classList.add('open');
   diaryPage.setAttribute('aria-hidden', 'false');
   diaryOpen = true;
@@ -1619,9 +1620,7 @@ function openDiary() {
 }
 
 function closeDiary() {
-  if (diaryOpen) saveDiary();   // 手势中途取消时还没渲染过，不能拿旧内容回写
-  diaryPage.classList.remove('dragging');
-  diaryPage.style.transform = '';
+  if (diaryOpen) saveDiary();   // 长文可能还没到 0.5s 自动存，先落盘再走
   diaryPage.classList.remove('open');
   diaryPage.setAttribute('aria-hidden', 'true');
   diaryOpen = false;
@@ -1663,74 +1662,62 @@ dqForm.addEventListener('submit', function (e) {
   haptic();
 });
 
-/* 顶栏右滑打开：先判断方向，再跟手；松手超过屏宽 30% 停在开的位置。
- * 起手避开最左 18px（Safari 的边缘返回手势）；顶栏之外不接管，轨道滚动不受影响。 */
-var swipeState = { on: false, moved: false, x: 0, y: 0, dx: 0, W: 0 };
-var topbarEl = document.querySelector('.topbar');
-
-function suppressClick() {
-  var block = function (e) { e.preventDefault(); e.stopPropagation(); };
-  document.addEventListener('click', block, true);
-  setTimeout(function () { document.removeEventListener('click', block, true); }, 400);
-}
-
-topbarEl.addEventListener('touchstart', function (e) {
-  if (diaryOpen || activeSheet || !e.touches || e.touches.length !== 1) return;
-  var t = e.touches[0];
-  if (t.clientX < 18) return;
-  swipeState.on = true;
-  swipeState.moved = false;
-  swipeState.x = t.clientX;
-  swipeState.y = t.clientY;
-  swipeState.dx = 0;
-  swipeState.W = window.innerWidth || 360;
-}, { passive: true });
-
-topbarEl.addEventListener('touchmove', function (e) {
-  if (!swipeState.on) return;
-  var t = e.touches[0];
-  var dx = t.clientX - swipeState.x, dy = t.clientY - swipeState.y;
-  if (!swipeState.moved) {
-    if (Math.abs(dx) < 10 && Math.abs(dy) < 10) return;
-    if (dx <= 0 || dx < Math.abs(dy)) { swipeState.on = false; return; }   // 不是向右横划
-    swipeState.moved = true;
-    diaryPage.classList.add('dragging', 'open');
-    diaryPage.setAttribute('aria-hidden', 'false');
+/* 顶部滑条（P3.32）：圆钮跟手、页面不跟手，松手过半才切页并震动。
+ * 圆钮只在 30px 范围内起手，不与轨道滚动 / 横向模式抢手势；
+ * 移动与松手监听挂在 window 上，手指拖出圆钮也能收到事件。 */
+function bindRailSlider(knob, slider, rev, onCommit) {
+  var max = 0, drag = false, sx = 0;
+  function measure() { max = slider.clientWidth - knob.offsetWidth - 4; }
+  function setX(v) {
+    v = Math.max(0, Math.min(max, v));
+    knob.style.transform = 'translateX(' + (rev ? -v : v) + 'px)';
+    return max > 0 ? v / max : 0;
   }
-  swipeState.dx = Math.max(0, dx);
-  diaryPage.style.transform =
-    'translateX(' + (Math.min(swipeState.dx, swipeState.W) - swipeState.W) + 'px)';
-  e.preventDefault();
-}, { passive: false });
-
-function endSwipe() {
-  if (!swipeState.on) return;
-  swipeState.on = false;
-  if (!swipeState.moved) return;
-  swipeState.moved = false;
-  suppressClick();
-  if (swipeState.dx > swipeState.W * 0.3) openDiary();
-  else closeDiary();
+  knob.addEventListener('pointerdown', function (e) {
+    measure();
+    drag = true; sx = e.clientX;
+    knob.classList.remove('spring');
+    document.body.classList.add('slider-dragging');
+    e.preventDefault();
+  });
+  window.addEventListener('pointermove', function (e) {
+    if (!drag) return;
+    setX(rev ? sx - e.clientX : e.clientX - sx);
+  });
+  window.addEventListener('pointerup', function (e) {
+    if (!drag) return;
+    drag = false;
+    var p = setX(rev ? sx - e.clientX : e.clientX - sx);
+    knob.classList.add('spring');
+    document.body.classList.remove('slider-dragging');
+    if (p >= 0.5) {
+      slider.classList.add('commit');
+      setTimeout(function () { slider.classList.remove('commit'); }, 300);
+      onCommit();
+    }
+    setX(0);
+  });
+  window.addEventListener('pointercancel', function () {
+    if (!drag) return;
+    drag = false;
+    knob.classList.add('spring');
+    document.body.classList.remove('slider-dragging');
+    setX(0);
+  });
 }
-topbarEl.addEventListener('touchend', endSwipe);
-topbarEl.addEventListener('touchcancel', endSwipe);
 
-/* 记录页顶栏左滑关闭 */
-var diaryTopEl = document.querySelector('.diary-top');
-var diarySwipe = null;
-diaryTopEl.addEventListener('touchstart', function (e) {
-  if (!diaryOpen || !e.touches || e.touches.length !== 1) { diarySwipe = null; return; }
-  diarySwipe = { x: e.touches[0].clientX, y: e.touches[0].clientY };
-}, { passive: true });
-diaryTopEl.addEventListener('touchend', function (e) {
-  if (!diarySwipe) return;
-  var t = e.changedTouches && e.changedTouches[0];
-  var s = diarySwipe;
-  diarySwipe = null;
-  if (!t) return;
-  var dx = t.clientX - s.x, dy = t.clientY - s.y;
-  if (dx < -50 && Math.abs(dx) > Math.abs(dy)) closeDiary();
-});
+bindRailSlider(
+  document.getElementById('rail-knob'),
+  document.getElementById('rail-slider'),
+  false,
+  openDiary
+);
+bindRailSlider(
+  document.getElementById('rail-knob-b'),
+  document.getElementById('rail-slider-b'),
+  true,
+  function () { haptic(); closeDiary(); }
+);
 
 /* ===== 设置面板辅助 ===== */
 function timeVal(v) {

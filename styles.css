@@ -199,6 +199,63 @@ input { font: inherit; color: inherit; }
   opacity: .22;
   pointer-events: none;
 }
+/* ===== 顶部滑条（P3.32）=====
+ * 关机滑条同款。整条住在 64px 安全线里（发虚区），所以只放简单图形：
+ * 滑轨 + 圆钮，不放常驻文字；拖动时提示才出现在安全线下方的清晰区。 */
+.rail-slider {
+  position: absolute;
+  left: 12px;
+  right: 12px;
+  top: calc(env(safe-area-inset-top) + 14px);
+  height: 36px;
+  border-radius: 999px;
+  background: var(--panel-2);
+  border: 1px solid var(--chip-line);
+  z-index: 2;
+}
+.rail-slider.rev .rail-knob { left: auto; right: 2px; }
+.rail-slider.commit { background: var(--blue-active); }
+.rail-knob {
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  width: 30px;
+  height: 30px;
+  border-radius: 999px;
+  background: var(--chip-active);
+  border: 1px solid var(--focus-line);
+  color: var(--blue-ink);
+  font-size: 14px;
+  line-height: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: grab;
+  touch-action: none;
+}
+.rail-knob:active { cursor: grabbing; }
+@media (prefers-reduced-motion: no-preference) {
+  .rail-knob.spring { transition: transform .28s cubic-bezier(.22,.61,.36,1); }
+}
+.rail-hint {
+  position: absolute;
+  left: 50%;
+  top: calc(env(safe-area-inset-top) + 60px);
+  transform: translateX(-50%);
+  background: var(--hint-bg);
+  border: 1px solid var(--hint-line);
+  color: var(--muted);
+  font-size: 11px;
+  line-height: 16px;
+  padding: 2px 10px;
+  border-radius: 999px;
+  white-space: nowrap;
+  opacity: 0;
+  transition: opacity .15s;
+  pointer-events: none;
+  z-index: 3;
+}
+body.slider-dragging .rail-hint { opacity: 1; }
 /* 中间日期块：整块可点开日历。flex:1 + min-width:0 吃满两侧剩余宽度 */
 .head-mid {
   flex: 1 1 auto;
@@ -804,9 +861,8 @@ body.horiz .hint {
   transition: transform .26s cubic-bezier(.22,.61,.36,1), visibility .26s;
 }
 .diary-page.open { transform: translateX(0); visibility: visible; }
-.diary-page.dragging { transition: none; }
-
 .diary-top {
+  position: relative;
   flex: none;
   display: flex;
   align-items: center;
