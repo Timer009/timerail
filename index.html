@@ -27,10 +27,10 @@
   if (m) m.setAttribute('content', light ? '#f5f8fc' : '#0e131f');
 })();
 </script>
-<link rel="manifest" href="manifest.webmanifest?v=p3.36">
+<link rel="manifest" href="manifest.webmanifest?v=p3.37">
 <link rel="icon" type="image/png" sizes="192x192" href="icon-192.png">
 <link rel="apple-touch-icon" href="apple-touch-icon.png">
-<link rel="stylesheet" href="styles.css?v=p3.36">
+<link rel="stylesheet" href="styles.css?v=p3.37">
 </head>
 <body>
 
@@ -55,10 +55,17 @@
       <svg class="rail-ic" viewBox="0 0 24 24"><path d="M17 3a2.828 2.828 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5L17 3z" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
     </div>
   </div>
-  <!-- 顶栏按钮（P3.36）：⇄ 最左、⚙ 最右，‹ › 对称贴在日期两侧 -->
+  <!-- 顶栏按钮（P3.37 / P3.37）：图标全部内联 SVG，不再用字符——
+       字符由系统字体画，iOS / 安卓粗细大小不一致 -->
   <div class="nav-left">
-    <button class="icon orient" id="orient" aria-label="切换为横向">⇄</button>
-    <button class="icon chev" id="prev" aria-label="前一天">‹</button>
+    <button class="icon orient" id="orient" aria-label="切换为横向">
+      <svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M4 7.5h16M16.5 4L20 7.5 16.5 11M20 16.5H4M7.5 13L4 16.5 7.5 20"/>
+      </svg>
+    </button>
+    <button class="icon chev" id="prev" aria-label="前一天">
+      <svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 4.5L8 12l7 7.5"/></svg>
+    </button>
   </div>
   <!-- 日期（P3.27）：回到顶栏中间，整块可点开日历。左右两组图标等宽，日期真正居中 -->
   <div class="head-mid" id="dayhead">
@@ -66,8 +73,15 @@
     <div class="head-sub" id="sub-label">—</div>
   </div>
   <div class="nav-right">
-    <button class="icon chev" id="next" aria-label="后一天">›</button>
-    <button class="icon" id="gear" aria-label="设置">⚙</button>
+    <button class="icon chev" id="next" aria-label="后一天">
+      <svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 4.5L16 12l-7 7.5"/></svg>
+    </button>
+    <button class="icon" id="gear" aria-label="设置">
+      <svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round">
+        <circle cx="12" cy="12" r="3"/>
+        <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/>
+      </svg>
+    </button>
   </div>
 </header>
 
@@ -196,7 +210,7 @@
     </div>
   </div>
   <ul class="list" id="log-list"></ul>
-  <!-- 批量选择条（P3.36）：选中小记后一次性删除 -->
+  <!-- 批量选择条（P3.37）：选中小记后一次性删除 -->
   <div class="selbar" id="log-selbar" hidden>
     <button type="button" class="ghost mini" id="log-selall">全选</button>
     <span class="selcount" id="log-selcount">已选 0 条</span>
@@ -319,7 +333,7 @@
       <button type="button" class="ghost danger" id="reset">清空全部数据</button>
     </div>
 
-    <div class="note">数据仅保存在本机浏览器中 · 版本 P3.36 (2026-11-18)</div>
+    <div class="note">数据仅保存在本机浏览器中 · 版本 P3.37 (2026-11-18)</div>
   </div>
 </section>
 
@@ -341,6 +355,6 @@
 </div>
 
 <div id="toast"></div>
-<script src="app.js?v=p3.36"></script>
+<script src="app.js?v=p3.37"></script>
 </body>
 </html>

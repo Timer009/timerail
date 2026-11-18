@@ -283,8 +283,8 @@ input { font: inherit; color: inherit; }
   white-space: nowrap;
   overflow: hidden;
 }
-/* 顶栏图标（P3.36）：四个按钮 44px 触达区——⇄ 最左、⚙ 最右，
-   ‹ › 放大加亮后对称贴在日期两侧 */
+/* 顶栏图标（P3.36 / P3.37）：四个按钮 44px 触达区——⇄ 最左、⚙ 最右，
+   ‹ › 对称贴在日期两侧；P3.37 起图标全是内联 SVG（见下方尺寸规则） */
 .nav-left,
 .nav-right {
   display: flex;
@@ -299,8 +299,14 @@ input { font: inherit; color: inherit; }
   display: flex; align-items: center; justify-content: center;
   transition: background .15s, color .15s;
 }
-.icon.chev { font-size: 34px; padding-bottom: 3px; color: var(--text-2); }
-.icon.orient { font-size: 25px; }
+/* P3.37：图标全部换成内联 SVG，尺寸在这里统一；不再依赖系统字体，
+   iOS / 安卓 的箭头、纵横切换、齿轮逐像素一致 */
+.icon svg { display: block; }
+.icon.chev { color: var(--text-2); }
+.icon.chev svg { width: 28px; height: 28px; }
+.icon.orient svg { width: 22px; height: 22px; transition: transform .18s; }
+.icon.orient.vert svg { transform: rotate(90deg); }
+#gear svg { width: 22px; height: 22px; }
 .icon:active { background: var(--panel-2); color: var(--text); }
 
 /* ===== 存储失败告警条（常驻，直到恢复成功） ===== */

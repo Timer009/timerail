@@ -80,6 +80,8 @@
  *           批量选择（右上「选择」→ 勾选 / 全选 → 底部一次删除）
  *   - P3.36：顶栏重排为 ⇄ ‹ 日期 › ⚙，‹ › 放大加亮、边距 10px；iOS 双指缩放
  *           用 gesture 事件拦掉（Safari 忽略 user-scalable=no）
+ *   - P3.37：顶栏四个图标从字符换成内联 SVG（‹ › 28px / ⇄ 22px / ⚙ 22px），
+ *           纵横切换改为同一图形旋转 90°，两端渲染一致；#orient 不再写 textContent
  */
 (function () {
 'use strict';
@@ -1010,7 +1012,8 @@ function updateHeader() {
     b.classList.toggle('active', b.dataset.style === cfg().trackStyle);
   });
   var oi = document.getElementById('orient');
-  oi.textContent = isHoriz() ? '⇅' : '⇄';
+  /* P3.37：图标是内联 SVG，只切旋转 class，别再写 textContent（会把 svg 冲掉） */
+  oi.classList.toggle('vert', isHoriz());
   oi.setAttribute('aria-label', isHoriz() ? '切换为竖向' : '切换为横向');
   if (document.activeElement !== shiftInput) shiftInput.value = cfg().shiftName || '';
 }
