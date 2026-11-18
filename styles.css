@@ -204,10 +204,10 @@ input { font: inherit; color: inherit; }
  * （铅笔=去写 / 折线=回轨道），提示文字常驻滑轨内、居中被圆钮盖过。 */
 .rail-slider {
   position: absolute;
-  left: 12px;
-  right: 12px;
-  top: calc(env(safe-area-inset-top) + 14px);
-  height: 36px;
+  left: 36px;
+  right: 36px;
+  top: calc(env(safe-area-inset-top) + 10px);
+  height: 44px;
   border-radius: 999px;
   background: var(--panel-2);
   border: 1px solid var(--chip-line);
@@ -223,7 +223,7 @@ input { font: inherit; color: inherit; }
   align-items: center;
   justify-content: center;
   color: var(--muted-2);
-  font-size: 12px;
+  font-size: 14px;
   letter-spacing: 1px;
   white-space: nowrap;
   pointer-events: none;
@@ -232,8 +232,8 @@ input { font: inherit; color: inherit; }
   position: absolute;
   top: 2px;
   left: 2px;
-  width: 30px;
-  height: 30px;
+  width: 40px;
+  height: 40px;
   border-radius: 999px;
   background: var(--chip-active);
   border: 1px solid var(--focus-line);
@@ -245,7 +245,7 @@ input { font: inherit; color: inherit; }
   touch-action: none;
 }
 .rail-knob:active { cursor: grabbing; }
-.rail-ic { width: 16px; height: 16px; display: block; }
+.rail-ic { width: 20px; height: 20px; display: block; }
 @media (prefers-reduced-motion: no-preference) {
   .rail-knob.spring { transition: transform .28s cubic-bezier(.22,.61,.36,1); }
 }
