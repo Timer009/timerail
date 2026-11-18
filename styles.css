@@ -548,7 +548,10 @@ body.horiz #track {
   margin: 0;
 }
 body.horiz .node { z-index: 4; }
-.tlabel.ruler { transform: translate(-50%, -50%); }
+/* 横向时间标签（P3.38）：贴在圆点上方；节点偏上半屏时加 .below 改贴下方，
+   始终朝屏幕中线，避开外侧泳道 */
+.tlabel.hlabel { transform: translate(-50%, -100%); }
+.tlabel.hlabel.below { transform: translate(-50%, 0); }
 
 /* 横向事项条：长度 = duration */
 .hbar {

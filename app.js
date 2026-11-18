@@ -82,6 +82,7 @@
  *           用 gesture 事件拦掉（Safari 忽略 user-scalable=no）
  *   - P3.37：顶栏四个图标从字符换成内联 SVG（‹ › 28px / ⇄ 22px / ⚙ 22px），
  *           纵横切换改为同一图形旋转 90°，两端渲染一致；#orient 不再写 textContent
+ *   - P3.38：横向模式时间从底部标尺挪到每个圆点正上方，和纵向「时间贴圆圈」对齐
  */
 (function () {
 'use strict';
@@ -813,7 +814,7 @@ function renderH() {
 
   var nowBlock = isToday() ? Math.floor(nowOffset() / g) : -1;
 
-  // 节点 + 底部时间刻度
+  // 节点 + 圆点上方时间（P3.38：不再把时间堆在底部标尺）
   for (i = 0; i < B; i++) {
     var list = itemsInBlock(i), s = blockState(i, list), clock = blockStartClock(i);
     var nd = el('button', 'node st-' + s + (i === nowBlock ? ' now' : ''));
@@ -836,10 +837,14 @@ function renderH() {
     (function (bi) { nd.addEventListener('click', function () { openBlock(bi); }); })(i);
     layer.appendChild(nd);
 
-    var lb = moodLabel(el('span', 'tlabel ruler' + (clock % 60 === 0 ? ' hour' : ''), fmt(clock)),
-      blockMood(i, list));
-    lb.style.left = xOf(i) + 'px';
-    lb.style.top = (H - 24) + 'px';
+    /* 时间贴圆点（P3.38）：默认放上方；节点偏上半屏时改放下方，
+       始终朝屏幕中线放，避免撞到外侧泳道里的事项条。rail 风格事项全在轴下，固定上方 */
+    var above = st === 'rail' || pts[i].y >= Hc;
+    var lb = moodLabel(el('span', 'tlabel hlabel' + (above ? '' : ' below') +
+      (clock % 60 === 0 ? ' hour' : '') +
+      (clock < viewStart() ? ' second' : ''), fmt(clock)), blockMood(i, list));
+    lb.style.left = pts[i].x + 'px';
+    lb.style.top = (pts[i].y + (above ? -1 : 1) * (nodeD / 2 + 8)) + 'px';
     layer.appendChild(lb);
   }
 
