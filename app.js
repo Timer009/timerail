@@ -84,6 +84,7 @@
  *           纵横切换改为同一图形旋转 90°，两端渲染一致；#orient 不再写 textContent
  *   - P3.38：横向模式时间从底部标尺挪到每个圆点正上方，和纵向「时间贴圆圈」对齐
  *   - P3.39：直线风格竖向轴心 0.3W → 0.5W，轨道居中；该风格强制时间左、事项右
+ *   - P3.40：直线风格横向轴心 0.3H → 0.5H（中线），和竖向居中一致
  */
 (function () {
 'use strict';
@@ -785,10 +786,12 @@ function renderH() {
   var g = cfg().granularity, colW = ROW_H[g], nodeD = NODE_D[g], B = blocks();
   var axisLen = B * colW;
   var W = HPAD * 2 + axisLen;
+  var st = cfg().trackStyle;
+  /* 先撑开横向宽度并强制回流，再量高度：横向滚动条会让 wrap 的 clientHeight
+     变小，先量后撑会让轴心比可视中线偏下（P3.40 修） */
+  track.style.width = W + 'px';
   var H = wrap.clientHeight || 560;
   var Hc = H / 2;
-  var st = cfg().trackStyle;
-  track.style.width = W + 'px';
   track.style.height = H + 'px';
   svg.innerHTML = '';
   layer.innerHTML = '';
@@ -799,7 +802,8 @@ function renderH() {
   var xOf = function (i) { return HPAD + (i + 0.5) * colW; };
   var axisAmp = SHAPES[st].amp * H * 0.35;   // 横向把风格起伏压扁，给泳道让位
   var axisY = function (i) {
-    if (st === 'rail') return H * 0.3;
+    /* P3.40：rail 轴心从 0.3H 改到正中（与竖向 P3.39 对齐），下方不再留一大片空 */
+    if (st === 'rail') return Hc;
     return Hc + axisAmp * shapeUnit(i, B);
   };
   var pts = [];
