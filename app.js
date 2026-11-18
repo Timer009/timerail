@@ -83,6 +83,7 @@
  *   - P3.37：顶栏四个图标从字符换成内联 SVG（‹ › 28px / ⇄ 22px / ⚙ 22px），
  *           纵横切换改为同一图形旋转 90°，两端渲染一致；#orient 不再写 textContent
  *   - P3.38：横向模式时间从底部标尺挪到每个圆点正上方，和纵向「时间贴圆圈」对齐
+ *   - P3.39：直线风格竖向轴心 0.3W → 0.5W，轨道居中；该风格强制时间左、事项右
  */
 (function () {
 'use strict';
@@ -562,7 +563,8 @@ function shapeUnit(i, B) {
 }
 /* 竖向：节点横坐标；纵坐标永远是第 i 个时段 */
 function xAt(i, W, B) {
-  if (cfg().trackStyle === 'rail') return W * 0.3;
+  /* P3.39：直线风格轴心居屏幕中线（原 0.3W 太靠左，空日右侧留大片空白） */
+  if (cfg().trackStyle === 'rail') return W * 0.5;
   return W / 2 + SHAPES[cfg().trackStyle].amp * W * shapeUnit(i, B);
 }
 
@@ -675,7 +677,9 @@ function renderV() {
     var list = itemsInBlock(i);
     var st = blockState(i, list);
     var clock = blockStartClock(i);
-    var side = x < W / 2 ? 'left' : 'right';   // 节点靠左 → 时间贴左、分支向右
+    /* 节点靠左 → 时间贴左、分支向右；P3.39 直线风格轴心居中，
+       必须强制 side='left'，否则会判成右半边把时间和事项对调 */
+    var side = (cfg().trackStyle === 'rail' || x < W / 2) ? 'left' : 'right';
 
     // 时间标签（带时段表情）
     var lb = moodLabel(el('span', 'tlabel' +
