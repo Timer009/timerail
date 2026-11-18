@@ -2,7 +2,7 @@
 <html lang="zh-CN">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, interactive-widget=resizes-content">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, interactive-widget=resizes-content, maximum-scale=1, user-scalable=no">
 <meta name="theme-color" content="#0e131f">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-capable" content="yes">
@@ -27,10 +27,10 @@
   if (m) m.setAttribute('content', light ? '#f5f8fc' : '#0e131f');
 })();
 </script>
-<link rel="manifest" href="manifest.webmanifest?v=p3.35">
+<link rel="manifest" href="manifest.webmanifest?v=p3.36">
 <link rel="icon" type="image/png" sizes="192x192" href="icon-192.png">
 <link rel="apple-touch-icon" href="apple-touch-icon.png">
-<link rel="stylesheet" href="styles.css?v=p3.35">
+<link rel="stylesheet" href="styles.css?v=p3.36">
 </head>
 <body>
 
@@ -55,9 +55,10 @@
       <svg class="rail-ic" viewBox="0 0 24 24"><path d="M17 3a2.828 2.828 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5L17 3z" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
     </div>
   </div>
+  <!-- 顶栏按钮（P3.36）：⇄ 最左、⚙ 最右，‹ › 对称贴在日期两侧 -->
   <div class="nav-left">
+    <button class="icon orient" id="orient" aria-label="切换为横向">⇄</button>
     <button class="icon chev" id="prev" aria-label="前一天">‹</button>
-    <button class="icon chev" id="next" aria-label="后一天">›</button>
   </div>
   <!-- 日期（P3.27）：回到顶栏中间，整块可点开日历。左右两组图标等宽，日期真正居中 -->
   <div class="head-mid" id="dayhead">
@@ -65,7 +66,7 @@
     <div class="head-sub" id="sub-label">—</div>
   </div>
   <div class="nav-right">
-    <button class="icon" id="orient" aria-label="切换为横向">⇄</button>
+    <button class="icon chev" id="next" aria-label="后一天">›</button>
     <button class="icon" id="gear" aria-label="设置">⚙</button>
   </div>
 </header>
@@ -195,7 +196,7 @@
     </div>
   </div>
   <ul class="list" id="log-list"></ul>
-  <!-- 批量选择条（P3.35）：选中小记后一次性删除 -->
+  <!-- 批量选择条（P3.36）：选中小记后一次性删除 -->
   <div class="selbar" id="log-selbar" hidden>
     <button type="button" class="ghost mini" id="log-selall">全选</button>
     <span class="selcount" id="log-selcount">已选 0 条</span>
@@ -318,7 +319,7 @@
       <button type="button" class="ghost danger" id="reset">清空全部数据</button>
     </div>
 
-    <div class="note">数据仅保存在本机浏览器中 · 版本 P3.35 (2026-11-18)</div>
+    <div class="note">数据仅保存在本机浏览器中 · 版本 P3.36 (2026-11-18)</div>
   </div>
 </section>
 
@@ -340,6 +341,6 @@
 </div>
 
 <div id="toast"></div>
-<script src="app.js?v=p3.35"></script>
+<script src="app.js?v=p3.36"></script>
 </body>
 </html>

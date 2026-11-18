@@ -1796,3 +1796,36 @@ P3.33 实机反馈两条：iOS 顶部发虚仍在（**用户拍板不再处理�
 
 - 批量删除只在小记面板内（底栏「记录」→「管理」进入）；记录页内联列表保持只读展示，不重复放一套删除入口。
 - 选择态是可见按钮进入，不做长按 / 滑动等隐藏手势（P3.30 的教训）。
+
+## P3.36 · 顶栏重排放大 + iOS 双指缩放拦截 ✅ 2026-11-18
+
+### 一、为什么改
+
+实机反馈：‹ › 与 ⇄ 偏小发灰、齿轮也离屏幕边太近；希望箭头对称放日期两侧、⇄ 最左、⚙ 最右。另外 iOS 双指缩小会把整页压小、松手回弹，容易误触，安卓没有。
+
+### 二、怎么做的
+
+| 项 | 改动 |
+|---|---|
+| 顺序 | `‹ ›` 在左 + `⇄ ⚙` 在右 → **⇄ ‹ 日期 › ⚙**（左右组仍是各 2 个 44px 按钮，日期精确居中） |
+| 留白 | `.topbar` 左右 padding 4px → **10px** |
+| 箭头 | `.icon.chev` 28px → **34px**，颜色 `--muted` → `--text-2` |
+| ⇄ | 新增 `.icon.orient` 25px（原 21px） |
+| 齿轮 | 不改（21px，用户确认清晰） |
+| 触达区 | 44×44 不变 |
+| 缩放 | viewport 加 `maximum-scale=1, user-scalable=no`；`body` 加 `touch-action: manipulation`；`app.js` 拦 Safari 专有 `gesturestart / gesturechange / gestureend` |
+
+### 三、验收（390×844 无头 Chrome，15 项断言全过 + 截图目检）
+
+- ✅ 左组 `orient,prev`、右组 `next,gear`；日期中心距屏幕中线 ≤1.5px
+- ✅ 箭头 34px / ⇄ 25px / 箭头颜色比 ⇄ 亮；触达区 44×44
+- ✅ ⇄ 左边距 10px、⚙ 右边距 10px
+- ✅ viewport 限制生效、body `touch-action: manipulation`、合成 gesturestart 事件被 `preventDefault`
+- ✅ 前后一天按钮、⇄ 纵横切换回归正常；滑条圆钮仍是 `touch-action: none`（拖动不受影响）
+- ✅ 截图目检：四图标对称、无重叠、日期未挤压
+
+### 四、说明（重要）
+
+- iOS 从 10 起忽略 `user-scalable=no` / `maximum-scale`，**真正起作用的是 gesture 事件拦截**；这是尽力而为方案，换 iOS 大版本需实机复查。
+- 拦截只在 document 层，不影响页面滚动、横向模式滚动、滑条拖动。
+- 安卓 Chrome 认 viewport 限制，行为不变。

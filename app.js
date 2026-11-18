@@ -78,6 +78,8 @@
  *           （左右边距 36px，不贴屏幕两边）；iOS 顶部发虚经实机确认放弃处理
  *   - P3.35：记录页长文区至少半屏，速记再多也不压缩写作空间；小记面板加
  *           批量选择（右上「选择」→ 勾选 / 全选 → 底部一次删除）
+ *   - P3.36：顶栏重排为 ⇄ ‹ 日期 › ⚙，‹ › 放大加亮、边距 10px；iOS 双指缩放
+ *           用 gesture 事件拦掉（Safari 忽略 user-scalable=no）
  */
 (function () {
 'use strict';
@@ -2158,6 +2160,13 @@ document.getElementById('orient').addEventListener('click', function () {
   render();
   scrollToNow(false);
   haptic();
+});
+
+/* iOS 双指缩放（P3.36）：Safari 从 iOS 10 起忽略 user-scalable=no，
+   只能拦它的专有手势事件；安卓 Chrome 认 viewport 限制，不需要这段。
+   不影响 `#wrap` 滚动与滑条圆钮拖动（`.rail-knob` 自己的 touch-action:none 仍在）。 */
+['gesturestart', 'gesturechange', 'gestureend'].forEach(function (ev) {
+  document.addEventListener(ev, function (e) { e.preventDefault(); }, { passive: false });
 });
 
 document.getElementById('gseg').addEventListener('click', function (e) {
