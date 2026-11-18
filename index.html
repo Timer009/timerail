@@ -27,10 +27,10 @@
   if (m) m.setAttribute('content', light ? '#f5f8fc' : '#0e131f');
 })();
 </script>
-<link rel="manifest" href="manifest.webmanifest?v=p3.32">
+<link rel="manifest" href="manifest.webmanifest?v=p3.33">
 <link rel="icon" type="image/png" sizes="192x192" href="icon-192.png">
 <link rel="apple-touch-icon" href="apple-touch-icon.png">
-<link rel="stylesheet" href="styles.css?v=p3.32">
+<link rel="stylesheet" href="styles.css?v=p3.33">
 </head>
 <body>
 
@@ -47,12 +47,14 @@
     </defs>
     <path d="M-20 46 C 45 46, 60 20, 115 20 S 185 46, 245 46 S 315 20, 410 20"></path>
   </svg>
-  <!-- 顶部滑条（P3.32）：住在安全垫里的可见开关，只放图形（发虚区不放文字），
-       拖动时提示才出现在安全线下方的清晰区 -->
+  <!-- 顶部滑条（P3.33）：住在安全垫里的可见开关。圆钮画去向图标（铅笔=去写），
+       提示文字常驻滑轨内、被圆钮盖过（带内文字有轻微发虚，用户已接受） -->
   <div class="rail-slider" id="rail-slider" aria-hidden="true">
-    <div class="rail-knob" id="rail-knob">›</div>
+    <span class="rail-label">右滑写日记</span>
+    <div class="rail-knob" id="rail-knob">
+      <svg class="rail-ic" viewBox="0 0 24 24"><path d="M17 3a2.828 2.828 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5L17 3z" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+    </div>
   </div>
-  <div class="rail-hint" id="rail-hint" data-text="过半松手 · 进入记录页">过半松手 · 进入记录页</div>
   <div class="nav-left">
     <button class="icon chev" id="prev" aria-label="前一天">‹</button>
     <button class="icon chev" id="next" aria-label="后一天">›</button>
@@ -104,11 +106,13 @@
 <!-- 记录页（P3.30）：顶部滑条（P3.32）或点底栏「记录」打开。上面写当天长文，下面是当天速记 -->
 <section class="diary-page" id="diary-page" aria-hidden="true">
   <div class="diary-top">
-    <!-- 镜像滑条（P3.32）：圆钮在右，往左拖回轨道 -->
+    <!-- 镜像滑条（P3.33）：圆钮在右（折线=回轨道），往左拖回轨道，文字常驻轨道内 -->
     <div class="rail-slider rev" id="rail-slider-b" aria-hidden="true">
-      <div class="rail-knob" id="rail-knob-b">‹</div>
+      <span class="rail-label">左滑回轨道</span>
+      <div class="rail-knob" id="rail-knob-b">
+        <svg class="rail-ic" viewBox="0 0 24 24"><path d="M2 12c2.7-7 5.3-7 8 0s5.3 7 8 0" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      </div>
     </div>
-    <div class="rail-hint" id="rail-hint-b" data-text="过半松手 · 回到轨道">过半松手 · 回到轨道</div>
     <button class="icon" id="diary-close" aria-label="返回轨道">‹</button>
     <div class="diary-head">
       <div class="diary-title">今日记录</div>
@@ -305,7 +309,7 @@
       <button type="button" class="ghost danger" id="reset">清空全部数据</button>
     </div>
 
-    <div class="note">数据仅保存在本机浏览器中 · 版本 P3.32 (2026-11-18)</div>
+    <div class="note">数据仅保存在本机浏览器中 · 版本 P3.33 (2026-11-18)</div>
   </div>
 </section>
 
@@ -327,6 +331,6 @@
 </div>
 
 <div id="toast"></div>
-<script src="app.js?v=p3.32"></script>
+<script src="app.js?v=p3.33"></script>
 </body>
 </html>

@@ -72,6 +72,8 @@
  *           上方并标「记成」；新增文本导出（当天 / 全部，UTF-8 txt，不可导回）
  *   - P3.32：顶部滑条 —— 住进 64px 安全线（发虚区只放图形、不放文字），圆钮
  *           拖过半松手切页，记录页带内镜像滑条返回；P3.30 的隐形滑动手势删除
+ *   - P3.33：滑条提示文字常驻轨道内（右滑写日记 / 左滑回轨道），圆钮换去向
+ *           图标（铅笔 / 轨道折线），安全线下方的浮动提示删除
  */
 (function () {
 'use strict';
@@ -1546,10 +1548,11 @@ logForm.addEventListener('submit', function (e) {
   haptic();
 });
 
-/* ===== 记录页（P3.30 / P3.32）=====
+/* ===== 记录页（P3.30 / P3.32 / P3.33）=====
  * 数据：data.diary[dateKey] = { text, updatedAt }，与事项/小记一样按查看日归属。
- * 打开：顶部安全带内滑条（P3.32，圆钮拖过半松手）或底栏「记录」；关闭：记录页
+ * 打开：顶部安全带内滑条（P3.32 起圆钮拖过半松手）或底栏「记录」；关闭：记录页
  * 带内反向滑条、左上 ‹、Esc。页面不跟手——滑入的页面会盖住拖动的圆钮，同关机滑条。
+ * 滑条文字常驻轨道内（P3.33）：「右滑写日记」/「左滑回轨道」，圆钮画去向图标。
  * 上半是长文，输入后 0.5 秒自动存；下半是当天速记，末尾可直接补记一条。
  */
 var diaryOpen = false;
@@ -1662,7 +1665,8 @@ dqForm.addEventListener('submit', function (e) {
   haptic();
 });
 
-/* 顶部滑条（P3.32）：圆钮跟手、页面不跟手，松手过半才切页并震动。
+/* 顶部滑条（P3.32 / P3.33）：圆钮跟手、页面不跟手，松手过半才切页并震动。
+ * 提示文字常驻滑轨内（P3.33），拖动不再点亮任何东西。
  * 圆钮只在 30px 范围内起手，不与轨道滚动 / 横向模式抢手势；
  * 移动与松手监听挂在 window 上，手指拖出圆钮也能收到事件。 */
 function bindRailSlider(knob, slider, rev, onCommit) {
@@ -1677,7 +1681,6 @@ function bindRailSlider(knob, slider, rev, onCommit) {
     measure();
     drag = true; sx = e.clientX;
     knob.classList.remove('spring');
-    document.body.classList.add('slider-dragging');
     e.preventDefault();
   });
   window.addEventListener('pointermove', function (e) {
@@ -1689,7 +1692,6 @@ function bindRailSlider(knob, slider, rev, onCommit) {
     drag = false;
     var p = setX(rev ? sx - e.clientX : e.clientX - sx);
     knob.classList.add('spring');
-    document.body.classList.remove('slider-dragging');
     if (p >= 0.5) {
       slider.classList.add('commit');
       setTimeout(function () { slider.classList.remove('commit'); }, 300);
@@ -1701,7 +1703,6 @@ function bindRailSlider(knob, slider, rev, onCommit) {
     if (!drag) return;
     drag = false;
     knob.classList.add('spring');
-    document.body.classList.remove('slider-dragging');
     setX(0);
   });
 }

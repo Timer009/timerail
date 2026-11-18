@@ -199,9 +199,9 @@ input { font: inherit; color: inherit; }
   opacity: .22;
   pointer-events: none;
 }
-/* ===== 顶部滑条（P3.32）=====
- * 关机滑条同款。整条住在 64px 安全线里（发虚区），所以只放简单图形：
- * 滑轨 + 圆钮，不放常驻文字；拖动时提示才出现在安全线下方的清晰区。 */
+/* ===== 顶部滑条（P3.32 / P3.33）=====
+ * 关机滑条同款，整条住在 64px 安全线里（发虚区）。P3.33 起圆钮放去向图标
+ * （铅笔=去写 / 折线=回轨道），提示文字常驻滑轨内、居中被圆钮盖过。 */
 .rail-slider {
   position: absolute;
   left: 12px;
@@ -215,6 +215,19 @@ input { font: inherit; color: inherit; }
 }
 .rail-slider.rev .rail-knob { left: auto; right: 2px; }
 .rail-slider.commit { background: var(--blue-active); }
+.rail-slider.commit .rail-label { color: var(--blue-ink); }
+.rail-label {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--muted-2);
+  font-size: 12px;
+  letter-spacing: 1px;
+  white-space: nowrap;
+  pointer-events: none;
+}
 .rail-knob {
   position: absolute;
   top: 2px;
@@ -225,8 +238,6 @@ input { font: inherit; color: inherit; }
   background: var(--chip-active);
   border: 1px solid var(--focus-line);
   color: var(--blue-ink);
-  font-size: 14px;
-  line-height: 1;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -234,28 +245,10 @@ input { font: inherit; color: inherit; }
   touch-action: none;
 }
 .rail-knob:active { cursor: grabbing; }
+.rail-ic { width: 16px; height: 16px; display: block; }
 @media (prefers-reduced-motion: no-preference) {
   .rail-knob.spring { transition: transform .28s cubic-bezier(.22,.61,.36,1); }
 }
-.rail-hint {
-  position: absolute;
-  left: 50%;
-  top: calc(env(safe-area-inset-top) + 60px);
-  transform: translateX(-50%);
-  background: var(--hint-bg);
-  border: 1px solid var(--hint-line);
-  color: var(--muted);
-  font-size: 11px;
-  line-height: 16px;
-  padding: 2px 10px;
-  border-radius: 999px;
-  white-space: nowrap;
-  opacity: 0;
-  transition: opacity .15s;
-  pointer-events: none;
-  z-index: 3;
-}
-body.slider-dragging .rail-hint { opacity: 1; }
 /* 中间日期块：整块可点开日历。flex:1 + min-width:0 吃满两侧剩余宽度 */
 .head-mid {
   flex: 1 1 auto;
