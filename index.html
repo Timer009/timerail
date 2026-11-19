@@ -27,10 +27,10 @@
   if (m) m.setAttribute('content', light ? '#f5f8fc' : '#0e131f');
 })();
 </script>
-<link rel="manifest" href="manifest.webmanifest?v=p3.42">
+<link rel="manifest" href="manifest.webmanifest?v=p3.43">
 <link rel="icon" type="image/png" sizes="192x192" href="icon-192.png">
 <link rel="apple-touch-icon" href="apple-touch-icon.png">
-<link rel="stylesheet" href="styles.css?v=p3.42">
+<link rel="stylesheet" href="styles.css?v=p3.43">
 </head>
 <body>
 
@@ -242,8 +242,8 @@
   <div class="log-type-row" id="log-type-row">
     <span class="log-type-label">记成</span>
     <div class="log-tabs" id="log-tabs">
-      <button type="button" data-type="highlight" class="active">💡 小灯泡</button>
-      <button type="button" data-type="review">📓 笔记本</button>
+      <button type="button" data-type="highlight" class="active">💡 灵光一闪</button>
+      <button type="button" data-type="review">📝 温故知新</button>
     </div>
   </div>
   <form class="addbar" id="log-form">
@@ -257,7 +257,7 @@
   <div class="modal-card" role="dialog" aria-modal="true" aria-labelledby="logtype-title">
     <div class="modal-title" id="logtype-title">新建小记类型</div>
     <div class="field-hint">起个短名字，配一个表情；只作分类，不影响已有小记。</div>
-    <input id="logtype-name" type="text" maxlength="4" placeholder="如：随记" autocomplete="off">
+    <input id="logtype-name" type="text" maxlength="4" placeholder="如：闪光时刻" autocomplete="off">
     <div class="emoji-row" id="logtype-emojis"></div>
     <div class="modal-actions">
       <button type="button" class="ghost" id="logtype-cancel">取消</button>
@@ -356,7 +356,7 @@
       <button type="button" class="ghost danger" id="reset">清空全部数据</button>
     </div>
 
-    <div class="note">数据仅保存在本机浏览器中 · 版本 P3.42 (2026-11-19)</div>
+    <div class="note">数据仅保存在本机浏览器中 · 版本 P3.43 (2026-11-19)</div>
   </div>
 </section>
 
@@ -378,6 +378,6 @@
 </div>
 
 <div id="toast"></div>
-<script src="app.js?v=p3.42"></script>
+<script src="app.js?v=p3.43"></script>
 </body>
 </html>

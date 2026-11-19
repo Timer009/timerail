@@ -89,6 +89,8 @@
  *           导出全部直接复用设置页按钮；纯浏览，不跳日期、不删除
  *   - P3.42：速记类型标签改名（显示层）：高光→「💡 小灯泡」、复盘→「📓 笔记本」，
  *           type 数据字段名不变；记录页「已保存」13px、全部记录入口图标 26px
+ *   - P3.43：二轮定稿——高光→「💡 灵光一闪」、复盘→「📝 温故知新」；自定义白名单瘦身为
+ *           ✨🌱🎯🧩（📝💡 让位主类型），点图标自动带出推荐名（闪光时刻/日拱一卒/正中靶心/今日拼图）
  */
 (function () {
 'use strict';
@@ -141,7 +143,11 @@ function defaultData() {
   };
 }
 function snapG(v) { v = +v; return (v === 30 || v === 60 || v === 120) ? v : 60; }
-var LOG_EMOJIS = ['✨', '🌱', '📝', '💡', '🎯', '🧩'];
+/* 自定义小记的表情白名单（P3.43 瘦身）：📝 已归温故知新、💡 已归灵光一闪，
+ * 不再进白名单，避免列表里出现同图不同名的徽标 */
+var LOG_EMOJIS = ['✨', '🌱', '🎯', '🧩'];
+/* 每个表情对应的推荐名（≤4 字）：设置里点哪个图标，名称框自动带出对应名 */
+var LOG_NAMES = { '✨': '闪光时刻', '🌱': '日拱一卒', '🎯': '正中靶心', '🧩': '今日拼图' };
 
 /* 节日区间（2026–2028）：[节日名, 起始日, 天数]。
  * 按「通常放假长度」铺成区间，只用于顶栏显示节日名，不改变任何数据；不含调休补班。
@@ -245,7 +251,8 @@ function normalize(d) {
     if (lname) {
       d.settings.logCustom = {
         name: lname,
-        emoji: LOG_EMOJIS.indexOf(lc.emoji) >= 0 ? lc.emoji : '📝'
+        /* P3.43：白名单瘦身后的回落用 ✨（旧配置的 📝 不在新白名单里） */
+        emoji: LOG_EMOJIS.indexOf(lc.emoji) >= 0 ? lc.emoji : '✨'
       };
     }
   }
@@ -1395,7 +1402,7 @@ function dropFromPool(p) {
     }, poolSheet);
 }
 
-/* ===== 今日小记（💡 小灯泡=高光 / 📓 笔记本=复盘 / 自定义分类） =====
+/* ===== 今日小记（💡 灵光一闪=高光 / 📝 温故知新=复盘 / 自定义分类） =====
  * 归属与事项一致：按班次日（viewKey）分组，夜班 00:30 记的是前一天那一班。
  * logs: { "<dateKey>": [{ id, type: 'highlight'|'review'|'custom', text, createdAt }] }
  * P3.6：旧类型 handover→highlight、issue→review（normalize 内迁移）
@@ -1406,19 +1413,19 @@ var logTypeTitle = document.getElementById('logtype-title');
 var logTypeName = document.getElementById('logtype-name');
 var logTypeEmojis = document.getElementById('logtype-emojis');
 var logTypeEditing = false;
-var logTypeEmoji = '📝';
+var logTypeEmoji = '✨';
 
 function logMeta(t, lg) {
   if (t === 'custom') {
-    var c = data.settings.logCustom || { name: '随记', emoji: '📝' };
+    var c = data.settings.logCustom || { name: '闪光时刻', emoji: '✨' };
     // 优先用条目里定格的图标/名字；P3.9 之前记的没有快照，退回当前配置
     var em = (lg && lg.emoji) || c.emoji;
     var lb = (lg && lg.label) || c.name;
     return { cls: 'custom', label: em + ' ' + lb };
   }
   return t === 'review'
-    ? { cls: 'review', label: '📓 笔记本' }
-    : { cls: 'highlight', label: '💡 小灯泡' };
+    ? { cls: 'review', label: '📝 温故知新' }
+    : { cls: 'highlight', label: '💡 灵光一闪' };
 }
 function logCount(key) { var a = data.logs[key]; return a ? a.length : 0; }
 
@@ -1432,8 +1439,8 @@ function renderLogTabs() {
     if (t === logType) b.className = 'active';
     logTabs.appendChild(b);
   }
-  add('highlight', '💡 小灯泡');
-  add('review', '📓 笔记本');
+  add('highlight', '💡 灵光一闪');
+  add('review', '📝 温故知新');
   if (data.settings.logCustom) {
     add('custom', data.settings.logCustom.emoji + ' ' + data.settings.logCustom.name);
   } else {
@@ -1598,15 +1605,16 @@ function openLogTypeDialog(editing) {
   logTypeEditing = !!editing;
   var c = data.settings.logCustom;
   logTypeTitle.textContent = logTypeEditing ? '修改小记类型' : '新建小记类型';
-  logTypeName.value = c ? c.name : '随记';
-  logTypeEmoji = c ? c.emoji : '📝';
+  /* 新建时：默认图标 ✨，名称跟着推荐名走，不再是「随记」 */
+  logTypeName.value = c ? c.name : LOG_NAMES['✨'];
+  logTypeEmoji = c ? c.emoji : '✨';
   renderEmojiRow();
   logTypeModal.hidden = false;
   setTimeout(function () { logTypeName.focus(); logTypeName.select(); }, 60);
 }
 function closeLogTypeDialog() { logTypeModal.hidden = true; }
 function saveLogType() {
-  var name = logTypeName.value.trim().slice(0, 4) || '随记';
+  var name = logTypeName.value.trim().slice(0, 4) || LOG_NAMES[logTypeEmoji] || '闪光时刻';
   data.settings.logCustom = { name: name, emoji: logTypeEmoji };
   saveData();
   logType = 'custom';
@@ -1632,6 +1640,8 @@ logTypeEmojis.addEventListener('click', function (e) {
   var b = e.target.closest('button');
   if (!b || !b.dataset.emoji) return;
   logTypeEmoji = b.dataset.emoji;
+  /* P3.43：点哪个图标，名称框自动带出对应推荐名（可再手动改） */
+  if (LOG_NAMES[logTypeEmoji]) logTypeName.value = LOG_NAMES[logTypeEmoji];
   renderEmojiRow();
 });
 document.getElementById('logtype-cancel').addEventListener('click', closeLogTypeDialog);
@@ -1658,7 +1668,7 @@ logForm.addEventListener('submit', function (e) {
   };
   // 自定义分类：把当前的图标和名字写进条目，之后改类型不影响这条
   if (logType === 'custom') {
-    var lcNow = data.settings.logCustom || { name: '随记', emoji: '📝' };
+    var lcNow = data.settings.logCustom || { name: '闪光时刻', emoji: '✨' };
     entry.emoji = lcNow.emoji;
     entry.label = lcNow.name;
   }
@@ -1734,6 +1744,8 @@ function renderDiary() {
   diarySub.textContent = fmtDay(key) + ' · ' + shiftOf(key).name;
   diarySaved.textContent = rec ? '已保存' : '';
   dqInput.value = '';
+  /* P3.43：打开记录页就重建「记成」区，自定义第三按钮随配置出现/消失 */
+  renderLogTabs();
   updateDiaryCount();
   renderDiaryLogs();
 }
