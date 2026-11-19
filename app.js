@@ -87,6 +87,8 @@
  *   - P3.40：直线风格横向轴心 0.3H → 0.5H（中线），和竖向居中一致
  *   - P3.41：记录页右上新增「全部记录」页：倒序堆叠每天长文+速记，逐天导出 txt；
  *           导出全部直接复用设置页按钮；纯浏览，不跳日期、不删除
+ *   - P3.42：速记类型标签改名（显示层）：高光→「💡 小灯泡」、复盘→「📓 笔记本」，
+ *           type 数据字段名不变；记录页「已保存」13px、全部记录入口图标 26px
  */
 (function () {
 'use strict';
@@ -1393,7 +1395,7 @@ function dropFromPool(p) {
     }, poolSheet);
 }
 
-/* ===== 今日小记（✨ 高光 / 🌱 复盘 / 自定义分类） =====
+/* ===== 今日小记（💡 小灯泡=高光 / 📓 笔记本=复盘 / 自定义分类） =====
  * 归属与事项一致：按班次日（viewKey）分组，夜班 00:30 记的是前一天那一班。
  * logs: { "<dateKey>": [{ id, type: 'highlight'|'review'|'custom', text, createdAt }] }
  * P3.6：旧类型 handover→highlight、issue→review（normalize 内迁移）
@@ -1415,8 +1417,8 @@ function logMeta(t, lg) {
     return { cls: 'custom', label: em + ' ' + lb };
   }
   return t === 'review'
-    ? { cls: 'review', label: '🌱 复盘' }
-    : { cls: 'highlight', label: '✨ 高光' };
+    ? { cls: 'review', label: '📓 笔记本' }
+    : { cls: 'highlight', label: '💡 小灯泡' };
 }
 function logCount(key) { var a = data.logs[key]; return a ? a.length : 0; }
 
@@ -1430,8 +1432,8 @@ function renderLogTabs() {
     if (t === logType) b.className = 'active';
     logTabs.appendChild(b);
   }
-  add('highlight', '✨ 高光');
-  add('review', '🌱 复盘');
+  add('highlight', '💡 小灯泡');
+  add('review', '📓 笔记本');
   if (data.settings.logCustom) {
     add('custom', data.settings.logCustom.emoji + ' ' + data.settings.logCustom.name);
   } else {

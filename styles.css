@@ -910,7 +910,7 @@ body.horiz .hint {
 }
 .diary-saved {
   flex: none; padding-right: 6px;
-  font-size: 11px; color: var(--muted-2);
+  font-size: 13px; color: var(--muted-2);
   font-variant-numeric: tabular-nums;
 }
 
@@ -995,7 +995,7 @@ body.sheet-over-diary #backdrop { z-index: 75; }
 .all-head { flex: 1; min-width: 0; padding: 0 2px; }
 .all-title { font-size: 16px; font-weight: 600; line-height: 22px; }
 .all-sub { font-size: 12px; line-height: 18px; color: var(--muted); margin-top: 2px; }
-#diary-all svg, #all-close svg { width: 22px; height: 22px; }
+#diary-all svg, #all-close svg { width: 26px; height: 26px; }
 .all-body {
   flex: 1;
   min-height: 0;
