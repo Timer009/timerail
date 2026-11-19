@@ -966,6 +966,74 @@ body.horiz .hint {
 /* 从记录页打开小记面板时，把它抬到记录页之上 */
 body.sheet-over-diary .sheet { z-index: 80; }
 body.sheet-over-diary #backdrop { z-index: 75; }
+
+/* ===== 全部记录页（P3.41）===== */
+/* 盖在记录页之上（70）但从右滑入，与小记面板（80）互斥：入口在记录页里，
+   面板开着时点不到入口，无需处理叠加 */
+.all-page {
+  position: fixed;
+  inset: 0;
+  z-index: 85;
+  display: flex;
+  flex-direction: column;
+  background: var(--bg);
+  transform: translateX(100%);
+  visibility: hidden;
+  transition: transform .26s cubic-bezier(.22,.61,.36,1), visibility .26s;
+}
+.all-page.open { transform: translateX(0); visibility: visible; }
+.all-top {
+  position: relative;
+  flex: none;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: calc(64px + env(safe-area-inset-top)) 8px 8px;
+  background: var(--bg);
+  border-bottom: 1px solid var(--line-soft);
+}
+.all-head { flex: 1; min-width: 0; padding: 0 2px; }
+.all-title { font-size: 16px; font-weight: 600; line-height: 22px; }
+.all-sub { font-size: 12px; line-height: 18px; color: var(--muted); margin-top: 2px; }
+#diary-all svg, #all-close svg { width: 22px; height: 22px; }
+.all-body {
+  flex: 1;
+  min-height: 0;
+  width: 100%;
+  max-width: 480px;
+  margin: 0 auto;
+  padding: 14px 16px calc(14px + env(safe-area-inset-bottom));
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+.all-empty { padding: 48px 0; text-align: center; color: var(--muted-2); font-size: 13px; }
+.all-card {
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  background: var(--panel-2);
+  padding: 12px 14px;
+}
+.all-card-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+.all-card-date { font-size: 14px; font-weight: 600; color: var(--text); }
+.all-sec { margin-top: 10px; font-size: 12px; font-weight: 500; color: var(--muted); }
+.all-text {
+  margin-top: 6px;
+  font-size: 15px;
+  line-height: 1.7;
+  color: var(--text);
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+.all-logs { list-style: none; margin-top: 4px; }
+.all-logs .row { padding: 8px 0; }
 body.sheet-over-diary .modal { z-index: 90; }
 
 /* 小记类型弹窗 */

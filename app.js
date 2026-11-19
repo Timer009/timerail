@@ -85,6 +85,8 @@
  *   - P3.38：横向模式时间从底部标尺挪到每个圆点正上方，和纵向「时间贴圆圈」对齐
  *   - P3.39：直线风格竖向轴心 0.3W → 0.5W，轨道居中；该风格强制时间左、事项右
  *   - P3.40：直线风格横向轴心 0.3H → 0.5H（中线），和竖向居中一致
+ *   - P3.41：记录页右上新增「全部记录」页：倒序堆叠每天长文+速记，逐天导出 txt；
+ *           导出全部直接复用设置页按钮；纯浏览，不跳日期、不删除
  */
 (function () {
 'use strict';
@@ -1975,6 +1977,96 @@ document.getElementById('export-all-txt').addEventListener('click', function () 
   haptic();
 });
 
+/* ===== 全部记录页（P3.41）=====
+ * 从记录页右上按钮进入：把所有有内容的日子倒序堆叠，每天一张卡片（长文 + 速记）。
+ * 纯浏览 + 导出，不做跳日期和删除（用户拍板）。有内容与否复用 dayText 的取舍，
+ * 与「导出全部文本」口径完全一致。
+ */
+var allPage = document.getElementById('all-page');
+var allBody = document.getElementById('all-body');
+var allSub = document.getElementById('all-sub');
+var allOpen = false;
+
+function allDays() {
+  var seen = {};
+  Object.keys(data.diary).forEach(function (k) { seen[k] = 1; });
+  Object.keys(data.logs).forEach(function (k) { seen[k] = 1; });
+  return Object.keys(seen).filter(function (k) { return !!dayText(k); }).sort().reverse();
+}
+
+function renderAll() {
+  allBody.innerHTML = '';
+  var keys = allDays();
+  allSub.textContent = keys.length ? '共 ' + keys.length + ' 天' : '';
+  if (!keys.length) {
+    allBody.appendChild(el('div', 'all-empty', '还没有任何记录'));
+    return;
+  }
+  keys.forEach(function (k) {
+    var d = parseKey(k);
+    if (!d) return;
+    var week = ['周日', '周一', '周二', '周三', '周四', '周五', '周六'][d.getDay()];
+    var card = el('article', 'all-card');
+    var head = el('div', 'all-card-head');
+    head.appendChild(el('span', 'all-card-date', ymd(d) + ' ' + week));
+    var ex = el('button', 'ghost mini');
+    ex.type = 'button';
+    ex.textContent = '导出';
+    ex.addEventListener('click', function () {
+      downloadText('微记-' + k + '.txt', dayText(k));
+      toast('已导出 ' + ymd(d) + ' 的文本');
+      haptic();
+    });
+    head.appendChild(ex);
+    card.appendChild(head);
+    var rec = data.diary[k];
+    if (rec && rec.text && rec.text.trim()) {
+      card.appendChild(el('div', 'all-sec', '【记录】'));
+      card.appendChild(el('div', 'all-text', rec.text));
+    }
+    var logs = data.logs[k] || [];
+    if (logs.length) {
+      card.appendChild(el('div', 'all-sec', '【速记】'));
+      var ul = el('ul', 'all-logs');
+      logs.forEach(function (lg) {
+        var meta = logMeta(lg.type, lg);
+        var li = el('li', 'row log-row');
+        li.appendChild(el('span', 'log-badge ' + meta.cls, meta.label));
+        var body = el('div', 'log-body');
+        body.appendChild(el('div', 'log-text', lg.text));
+        var t = new Date(lg.createdAt);
+        var clock = isNaN(t.getTime()) ? '' : pad(t.getHours()) + ':' + pad(t.getMinutes());
+        body.appendChild(el('div', 'log-time', clock ? clock + ' 记录' : '记录'));
+        li.appendChild(body);
+        ul.appendChild(li);
+      });
+      card.appendChild(ul);
+    }
+    allBody.appendChild(card);
+  });
+}
+
+function openAll() {
+  renderAll();
+  allPage.classList.add('open');
+  allPage.setAttribute('aria-hidden', 'false');
+  allOpen = true;
+  haptic();
+}
+
+function closeAll() {
+  allPage.classList.remove('open');
+  allPage.setAttribute('aria-hidden', 'true');
+  allOpen = false;
+}
+
+document.getElementById('diary-all').addEventListener('click', openAll);
+document.getElementById('all-close').addEventListener('click', closeAll);
+/* 导出全部 = 设置里那个按钮的原逻辑，直接复用，不抄第二份 */
+document.getElementById('all-export').addEventListener('click', function () {
+  document.getElementById('export-all-txt').click();
+});
+
 document.getElementById('import').addEventListener('click', function () {
   importFile.value = '';   // 允许连续导入同一个文件
   importFile.click();
@@ -2152,6 +2244,7 @@ document.addEventListener('keydown', function (e) {
   if (!calEl.hidden) { closeCal(); return; }
   if (!onboardEl.hidden) { closeOnboarding(true); return; }
   if (activeSheet) { hideSheet(); return; }
+  if (allOpen) { closeAll(); return; }
   if (diaryOpen) { closeDiary(); return; }
 });
 document.getElementById('storebar-retry').addEventListener('click', function () {

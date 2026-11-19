@@ -27,10 +27,10 @@
   if (m) m.setAttribute('content', light ? '#f5f8fc' : '#0e131f');
 })();
 </script>
-<link rel="manifest" href="manifest.webmanifest?v=p3.40">
+<link rel="manifest" href="manifest.webmanifest?v=p3.41">
 <link rel="icon" type="image/png" sizes="192x192" href="icon-192.png">
 <link rel="apple-touch-icon" href="apple-touch-icon.png">
-<link rel="stylesheet" href="styles.css?v=p3.40">
+<link rel="stylesheet" href="styles.css?v=p3.41">
 </head>
 <body>
 
@@ -55,7 +55,7 @@
       <svg class="rail-ic" viewBox="0 0 24 24"><path d="M17 3a2.828 2.828 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5L17 3z" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
     </div>
   </div>
-  <!-- 顶栏按钮（P3.40 / P3.40）：图标全部内联 SVG，不再用字符——
+  <!-- 顶栏按钮（P3.36 / P3.37）：图标全部内联 SVG，不再用字符——
        字符由系统字体画，iOS / 安卓粗细大小不一致 -->
   <div class="nav-left">
     <button class="icon orient" id="orient" aria-label="切换为横向">
@@ -134,6 +134,13 @@
       <div class="diary-sub" id="diary-sub">—</div>
     </div>
     <div class="diary-saved" id="diary-saved"></div>
+    <!-- 全部记录（P3.41）：按日期倒序浏览所有长文与速记，可逐天导出 txt -->
+    <button class="icon" id="diary-all" aria-label="全部记录">
+      <svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M8.5 3h6.2L18 6.3V19a2 2 0 0 1-2 2H8.5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2z"/>
+        <path d="M14.5 3v3.5H18"/><path d="M10 12h4M10 15.5h4"/>
+      </svg>
+    </button>
   </div>
   <div class="diary-body">
     <div class="diary-write">
@@ -155,6 +162,22 @@
       </form>
     </div>
   </div>
+</section>
+
+<!-- 全部记录页（P3.41）：从记录页右上按钮进入，倒序堆叠每天的长文与速记。
+     纯浏览 + 导出：不跳日期、不删除 -->
+<section class="all-page" id="all-page" aria-hidden="true">
+  <div class="all-top">
+    <button class="icon" id="all-close" aria-label="返回记录">
+      <svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 4.5L8 12l7 7.5"/></svg>
+    </button>
+    <div class="all-head">
+      <div class="all-title">全部记录</div>
+      <div class="all-sub" id="all-sub">—</div>
+    </div>
+    <button type="button" class="ghost mini" id="all-export">导出全部</button>
+  </div>
+  <div class="all-body" id="all-body"></div>
 </section>
 
 <div id="backdrop"></div>
@@ -210,7 +233,7 @@
     </div>
   </div>
   <ul class="list" id="log-list"></ul>
-  <!-- 批量选择条（P3.40）：选中小记后一次性删除 -->
+  <!-- 批量选择条（P3.35）：选中小记后一次性删除 -->
   <div class="selbar" id="log-selbar" hidden>
     <button type="button" class="ghost mini" id="log-selall">全选</button>
     <span class="selcount" id="log-selcount">已选 0 条</span>
@@ -333,7 +356,7 @@
       <button type="button" class="ghost danger" id="reset">清空全部数据</button>
     </div>
 
-    <div class="note">数据仅保存在本机浏览器中 · 版本 P3.40 (2026-11-18)</div>
+    <div class="note">数据仅保存在本机浏览器中 · 版本 P3.41 (2026-11-19)</div>
   </div>
 </section>
 
@@ -355,6 +378,6 @@
 </div>
 
 <div id="toast"></div>
-<script src="app.js?v=p3.40"></script>
+<script src="app.js?v=p3.41"></script>
 </body>
 </html>
