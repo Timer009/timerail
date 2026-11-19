@@ -996,7 +996,8 @@ body.sheet-over-diary #backdrop { z-index: 75; }
 .all-head { flex: 1; min-width: 0; padding: 0 2px; }
 .all-title { font-size: 16px; font-weight: 600; line-height: 22px; }
 .all-sub { font-size: 12px; line-height: 18px; color: var(--muted); margin-top: 2px; }
-#diary-all svg, #all-close svg { width: 26px; height: 26px; }
+/* P3.45：记录页左上返回/右上全部记录/全部记录页返回，统一 30px（触达区 44px 不变） */
+#diary-close svg, #diary-all svg, #all-close svg { width: 30px; height: 30px; }
 .all-body {
   flex: 1;
   min-height: 0;

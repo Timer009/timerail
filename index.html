@@ -27,10 +27,10 @@
   if (m) m.setAttribute('content', light ? '#f5f8fc' : '#0e131f');
 })();
 </script>
-<link rel="manifest" href="manifest.webmanifest?v=p3.44">
+<link rel="manifest" href="manifest.webmanifest?v=p3.45">
 <link rel="icon" type="image/png" sizes="192x192" href="icon-192.png">
 <link rel="apple-touch-icon" href="apple-touch-icon.png">
-<link rel="stylesheet" href="styles.css?v=p3.44">
+<link rel="stylesheet" href="styles.css?v=p3.45">
 </head>
 <body>
 
@@ -128,7 +128,9 @@
         <svg class="rail-ic" viewBox="0 0 24 24"><path d="M2 12c2.7-7 5.3-7 8 0s5.3 7 8 0" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg>
       </div>
     </div>
-    <button class="icon" id="diary-close" aria-label="返回轨道">‹</button>
+    <button class="icon" id="diary-close" aria-label="返回轨道">
+      <svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 4.5L8 12l7 7.5"/></svg>
+    </button>
     <div class="diary-head">
       <div class="diary-title">今日记录</div>
       <div class="diary-sub" id="diary-sub">—</div>
@@ -332,7 +334,7 @@
 
     <div class="field">
       <label>使用引导</label>
-      <button type="button" class="ghost" id="show-onboard">重看 3 步引导</button>
+      <button type="button" class="ghost" id="show-onboard">重看 5 步引导</button>
     </div>
 
     <div class="field">
@@ -355,17 +357,17 @@
       <button type="button" class="ghost danger" id="reset">清空全部数据</button>
     </div>
 
-    <div class="note">数据仅保存在本机浏览器中 · 版本 P3.44 (2026-11-19)</div>
+    <div class="note">数据仅保存在本机浏览器中 · 版本 P3.45 (2026-11-19)</div>
   </div>
 </section>
 
-<!-- 3 步引导 -->
+<!-- 5 步引导（P3.45：新增记录页与导入导出两步） -->
 <div class="onboard" id="onboard" hidden>
   <div class="onboard-card" role="dialog" aria-modal="true" aria-labelledby="ob-title">
-    <div class="ob-step" id="ob-step">1 / 3</div>
+    <div class="ob-step" id="ob-step">1 / 5</div>
     <div class="ob-title" id="ob-title">—</div>
     <div class="ob-body" id="ob-body">—</div>
-    <div class="ob-dots" id="ob-dots"><i class="on"></i><i></i><i></i></div>
+    <div class="ob-dots" id="ob-dots"><i class="on"></i><i></i><i></i><i></i><i></i></div>
     <div class="ob-actions">
       <button type="button" class="ghost" id="ob-skip">跳过</button>
       <div class="ob-nav">
@@ -377,6 +379,6 @@
 </div>
 
 <div id="toast"></div>
-<script src="app.js?v=p3.44"></script>
+<script src="app.js?v=p3.45"></script>
 </body>
 </html>
