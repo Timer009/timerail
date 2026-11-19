@@ -75,6 +75,7 @@ timerail/
 - 空状态、日期切换（含未来/历史日）
 - 引导（P2 建 / **P3.45 扩为 5 步**）：OB 数组驱动（步数、dots、「N / 5」、末步「开始使用」全部自动跟随 OB.length，HTML dots 是硬编码 5 个要同步）；文案：① 一天，一条微记 ② 点圈打钩，一步完成 ③ 没做完的，如实记下 ④ 想写就写，自动保存 ⑤ 随时导出，换机不丢。`?onboard=1` 强制显示；设置里「重看 5 步引导」重开
 - 记录页顶部图标（P3.45）：`#diary-close` / `#diary-all` / `#all-close` 的 SVG 统一 30px（触达区 44px 不变）；返回箭头已从字符 ‹ 换成与顶栏同款折线 SVG（P3.37 的漏网字符，至此顶栏/记录页无残留字符图标）
+- 安卓返回逐层退出（P3.46）：每开一层界面往 history 压一条（`navPush`，pushState `{tr:1}`），popstate = 关最上层（与 Esc 共用 `backOne` 链：小记弹窗→日历→引导→面板→全部记录→记录页）；程序性关闭（点 X/‹/滑条）走 `navDrop`（`back()` 消费条目）；根页面上按返回自然退出应用。**新开任何整页/弹层界面必须成对埋点 navPush/navDrop**，漏埋会导致该界面按系统返回直接退应用。双标志：`navDropPending`（程序性 back 的待回声数，popstate 里只递减不关层）、`navPopping`（popstate 驱动关闭时 close 内的 navDrop 自动跳过）。**竞态别动**：关闭的 back() 回声 ~80ms 落地，落地前重开界面直接压栈会留幽灵条目——navPush 遇 pending>0 自动排队（navPushQueued），回声归零后带 anyLayerOpen 守卫补压。QA 坑：history.length 只增不减（判基线用 `history.state == null`）；pushState 从回退位置补压复用条目（length 不增长）；popstate 回声异步（断言轮询别固定 sleep）；headless 自测用信标方案（Image 请求→本地服务器落盘，dump-dom 不可靠）
 
 ### 已知原型局限（正式版要做的都在这）
 无顺延池、无跨天顺延、无班次轮转、无班次日志、无 PWA、无导出导入、`confirm()` 用的是原生弹窗（正式版换自定义面板）、无单事项改名（只能删了重加）。

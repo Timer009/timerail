@@ -2097,3 +2097,38 @@ P3.42 实机后用户二轮调整：💡 文字改「灵光一闪」（已定）
 
 1. obRender 的步数/末步按钮逻辑全部由 OB.length 驱动，纯数组扩展零逻辑改动；唯一要手动同步的是 HTML 里的 5 个 dots 圆点（硬编码）。
 2. 引导文案第 4 步故意没点名「💡 灵光一闪 / 📝 温故知新」——类型名刚定稿（P3.43），文案里点名会让将来改名再返工；「亮点与回顾」的说法不随标签变。
+
+---
+
+## P3.46 · 安卓侧边返回逐层退出 ✅ 2026-11-19
+
+### 需求与拍板
+
+安卓侧边返回手势在任何界面都直接退出应用回桌面——PWA 界面不进返回栈，系统只能关应用。拍板方案：每开一层往 history 压一条（pushState），popstate = 关最上层（与 Esc 共用 backOne 链）；程序性关闭时 back() 消费条目；根页面上按返回自然退出。两个行为拍板点：记录页按返回 = 回时间轨（与 ‹ 一致）；桌面浏览器 back 也逐层关界面。
+
+### 改动
+
+| 项 | 改法 |
+|---|---|
+| nav 机制块 | `navPush`（开层压栈）/ `navDrop`（程序性消费，back()）/ `backOne`（逐层关闭链，与 Esc 共用）/ popstate 监听（系统返回 → 关最上层） |
+| 双标志 | `navDropPending`：程序性 back() 的待回声数，popstate 里只递减不关层；`navPopping`：popstate 正在驱动关闭时，close 内的 navDrop 跳过（条目已被系统消费） |
+| 埋点 12 处 | showSheet（首层 navPush，重复开守卫）/ hideSheet（had 模式末尾 navDrop）/ openDiary·closeDiary / openAll·closeAll / openCal·closeCal / openLogTypeDialog·closeLogTypeDialog / showOnboarding·closeOnboarding |
+| Esc | keydown 监听改调 backOne()，与系统返回同链同优先级 |
+| 竞态修复 | navPush 在回声未落地时排队（navPushQueued），popstate 回声分支 pending 归零后补压（带 anyLayerOpen 守卫）——防「关闭的 back() 回声还在路上（~80ms）时重开面板 → pushState 压在旧条目之上 → 回声落到旧 tr 条目而非根 → 根页面留幽灵条目，要多按一次返回才退干净」 |
+| 版本 | p3.46 三处精准替换 |
+
+### 验收（21 项断言全过，信标方案）
+
+- ✅ A 设置面板：push 后 +1 / 系统返回关面板 / 回基线
+- ✅ B 两层叠加：记录页 → 全部记录页，返回逐层退、每层恰好一次
+- ✅ C 程序性关闭 + 竞态：点 X 消费条目；关后瞬时重开先排队等回声落地再压栈，单次返回恰好关干净（无幽灵条目）；常规重开/关闭消费干净
+- ✅ D Esc 与系统返回同链：关全部记录页留记录页、再 Esc 关记录页、回基线
+- ✅ E 日历（hidden 型界面）也记账：返回关日历、回基线
+
+### 说明与坑
+
+1. **history.length 只增不减**（联合会话历史）：back 后不缩小，QA 判回基线要用 `history.state == null` 探测，不能用 length。
+2. **pushState 复用被回退的条目**：从回退后的位置补压，length 不增长——「关后瞬时重开」从外部观测回声前后不可区分（state 同形），QA 只能固定等 400ms（>回声延迟 ~80ms）稳定后直接验契约：back 一次 → 面板关 + 回基线。
+3. **popstate 回声异步 ~80ms**：断言需轮询等待，固定 sleep 会撞竞态。
+4. **致死交错（仅 QA 机器枪时序可触发）**：回声 + 排队补压 + QA 再 back 在 ms 级交错，Chrome 把两个 -1 合并成 -2 跨文档遍历，把 QA 顶层页导航杀掉；真实用户物理上不可能（<80ms 内 close→reopen→back）。修复在 QA 侧：setTimeout 补 400ms 延迟。
+5. **QA 信标方案**：headless dump-dom 不可靠（长期 0 字节），改 Image 请求发信标 → 本地 Python 服务器落盘（毫秒时间戳），绕开 chrome 输出通道；setTimeout 回调里的异常不进外层 try/catch，需 window error 信标兜底；信标到达毫秒级乱序，看时间戳不看行序。

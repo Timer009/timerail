@@ -94,6 +94,9 @@
  *   - P3.44：写作区底部只留右下角字数统计（删除「边写边存」引导文案，保存提示由右上「已保存」独家承担）
  *   - P3.45：引导扩为 5 步（新增「想写就写，自动保存」「随时导出，换机不丢」）；记录页返回/全部记录
  *           图标统一 30px SVG，返回箭头从字符换成与顶栏同款折线（P3.37 漏网字符收尾）
+ *   - P3.46：安卓侧边返回逐层退出——打开界面往 history 压条目，popstate = 关最上层（与 Esc 共用
+ *           backOne 链）；程序性关闭时 back() 消费条目，根页面上按返回自然退出；关后极快重开
+ *           先排队等回声落地再压栈（防幽灵条目）；iOS 不受影响
  */
 (function () {
 'use strict';
@@ -1062,7 +1065,58 @@ function scrollToNow(smooth) {
 }
 
 /* ===== 面板 ===== */
+/* ===== 安卓侧边返回逐层退出（P3.46） =====
+   现象：PWA 的各界面不进浏览器返回栈，安卓侧滑返回一律直接退回桌面。
+   方案：每打开一层界面往 history 压一条；系统返回 = popstate 关最上层（与 Esc 同一条链）；
+   程序性关闭（点 X/遮罩/Esc）时 back() 消费对应条目，保证根页面上按返回自然退出。
+   iOS 无侧边返回不受影响；桌面浏览器后退键从「离开网页」变为「逐层关界面」。 */
+var navDropPending = 0;   // 程序性 back() 的待回声数（popstate 里跳过不关层）
+var navPushQueued = 0;    // 回声未落地期间的新开层排队数（关后极快重开的竞态）
+var navPopping = false;   // popstate 正在驱动关闭：close 内的 navDrop 跳过（条目已被系统消费）
+function navPush() {
+  /* 关闭的 back() 回声还在路上时先排队：此刻压栈会把新层压在旧条目之上，
+     回声落地时 back() 落到旧条目而非根，留下幽灵条目（根页面要多按一次返回才退干净） */
+  if (navDropPending > 0) { navPushQueued++; return; }
+  try { history.pushState({ tr: 1 }, ''); } catch (e) {}
+}
+function navDrop() {
+  if (navPopping) return;
+  navDropPending++;
+  try { history.back(); } catch (e) { navDropPending--; }
+}
+/* 逐层关闭链：Esc 与系统返回共用，优先级与 P2 引导时代一致 */
+function backOne() {
+  if (!logTypeModal.hidden) { closeLogTypeDialog(); return true; }
+  if (!calEl.hidden) { closeCal(); return true; }
+  if (!onboardEl.hidden) { closeOnboarding(true); return true; }
+  if (activeSheet) { hideSheet(); return true; }
+  if (allOpen) { closeAll(); return true; }
+  if (diaryOpen) { closeDiary(); return true; }
+  return false;
+}
+/* 有没有任何界面开着（补压排队新层前先确认，防「关→瞬开→瞬关」三元竞态留鬼） */
+function anyLayerOpen() {
+  return !logTypeModal.hidden || !calEl.hidden || !onboardEl.hidden || !!activeSheet || allOpen || diaryOpen;
+}
+window.addEventListener('popstate', function () {
+  if (navDropPending > 0) {
+    navDropPending--;   // 程序性消费的回声
+    if (navDropPending === 0) {   // 所有回声落地、栈底干净了，补压排队的新层
+      while (navPushQueued > 0) {
+        navPushQueued--;
+        if (anyLayerOpen()) { try { history.pushState({ tr: 1 }, ''); } catch (e) {} }
+      }
+    }
+    return;
+  }
+  navPopping = true;
+  backOne();
+  navPopping = false;
+});
+
 function showSheet(s) {
+  if (activeSheet === s) return;   // 已开不重复计数
+  if (!activeSheet) navPush();     // 无 → 有才算新开一层（换面板仍是同一层）
   if (activeSheet && activeSheet !== s) {
     activeSheet.classList.remove('open');
     activeSheet.setAttribute('aria-hidden', 'true');
@@ -1075,6 +1129,7 @@ function showSheet(s) {
   backdrop.classList.add('open');
 }
 function hideSheet() {
+  var had = !!activeSheet;
   if (logSelMode) { logSelMode = false; logSelIds = {}; }
   if (activeSheet) {
     activeSheet.classList.remove('open');
@@ -1083,6 +1138,7 @@ function hideSheet() {
   activeSheet = null;
   backdrop.classList.remove('open');
   document.body.classList.remove('sheet-over-diary');
+  if (had) navDrop();
 }
 
 function openBlock(i) {
@@ -1605,6 +1661,7 @@ function renderEmojiRow() {
   });
 }
 function openLogTypeDialog(editing) {
+  if (!logTypeModal.hidden) return;
   logTypeEditing = !!editing;
   var c = data.settings.logCustom;
   logTypeTitle.textContent = logTypeEditing ? '修改小记类型' : '新建小记类型';
@@ -1613,9 +1670,14 @@ function openLogTypeDialog(editing) {
   logTypeEmoji = c ? c.emoji : '✨';
   renderEmojiRow();
   logTypeModal.hidden = false;
+  navPush();
   setTimeout(function () { logTypeName.focus(); logTypeName.select(); }, 60);
 }
-function closeLogTypeDialog() { logTypeModal.hidden = true; }
+function closeLogTypeDialog() {
+  var had = !logTypeModal.hidden;
+  logTypeModal.hidden = true;
+  if (had) navDrop();
+}
 function saveLogType() {
   var name = logTypeName.value.trim().slice(0, 4) || LOG_NAMES[logTypeEmoji] || '闪光时刻';
   data.settings.logCustom = { name: name, emoji: logTypeEmoji };
@@ -1754,18 +1816,22 @@ function renderDiary() {
 }
 
 function openDiary() {
+  if (diaryOpen) return;
   renderDiary();
   diaryPage.classList.add('open');
   diaryPage.setAttribute('aria-hidden', 'false');
   diaryOpen = true;
+  navPush();
   haptic();
 }
 
 function closeDiary() {
+  var had = diaryOpen;
   if (diaryOpen) saveDiary();   // 长文可能还没到 0.5s 自动存，先落盘再走
   diaryPage.classList.remove('open');
   diaryPage.setAttribute('aria-hidden', 'true');
   diaryOpen = false;
+  if (had) navDrop();
 }
 
 diaryInput.addEventListener('input', function () {
@@ -2064,17 +2130,21 @@ function renderAll() {
 }
 
 function openAll() {
+  if (allOpen) return;
   renderAll();
   allPage.classList.add('open');
   allPage.setAttribute('aria-hidden', 'false');
   allOpen = true;
+  navPush();
   haptic();
 }
 
 function closeAll() {
+  var had = allOpen;
   allPage.classList.remove('open');
   allPage.setAttribute('aria-hidden', 'true');
   allOpen = false;
+  if (had) navDrop();
 }
 
 document.getElementById('diary-all').addEventListener('click', openAll);
@@ -2130,13 +2200,19 @@ var calY = 0, calM = 0;
 var calLevel = 'month';
 
 function openCal() {
+  if (!calEl.hidden) return;
   calY = view.date.getFullYear();
   calM = view.date.getMonth();
   calLevel = 'month';
   renderCal();
   calEl.hidden = false;
+  navPush();
 }
-function closeCal() { calEl.hidden = true; }
+function closeCal() {
+  var had = !calEl.hidden;
+  calEl.hidden = true;
+  if (had) navDrop();
+}
 
 function renderCal() {
   var ymEl = document.getElementById('cal-ym');
@@ -2256,13 +2332,8 @@ document.getElementById('log-link').addEventListener('click', openDiary);
 document.getElementById('log-close').addEventListener('click', hideSheet);
 backdrop.addEventListener('click', hideSheet);
 document.addEventListener('keydown', function (e) {
-  if (e.key !== 'Escape') return;
-  if (!logTypeModal.hidden) { closeLogTypeDialog(); return; }
-  if (!calEl.hidden) { closeCal(); return; }
-  if (!onboardEl.hidden) { closeOnboarding(true); return; }
-  if (activeSheet) { hideSheet(); return; }
-  if (allOpen) { closeAll(); return; }
-  if (diaryOpen) { closeDiary(); return; }
+  /* Esc 与安卓侧边返回共用 backOne（P3.46）：逐层关，与系统返回手势行为一致 */
+  if (e.key === 'Escape') backOne();
 });
 document.getElementById('storebar-retry').addEventListener('click', function () {
   saveData();
@@ -2433,17 +2504,21 @@ function obRender() {
   document.getElementById('ob-next').textContent = obIdx === OB.length - 1 ? '开始使用' : '下一步';
 }
 function showOnboarding() {
+  if (!onboardEl.hidden) return;
   obIdx = 0;
   onboardEl.hidden = false;
   obRender();
   document.getElementById('ob-next').focus();
+  navPush();
 }
 function closeOnboarding(remember) {
+  var had = !onboardEl.hidden;
   onboardEl.hidden = true;
   if (remember && !data.settings.onboarded) {
     data.settings.onboarded = true;
     saveData();
   }
+  if (had) navDrop();
 }
 document.getElementById('ob-next').addEventListener('click', function () {
   if (obIdx < OB.length - 1) { obIdx++; obRender(); return; }
