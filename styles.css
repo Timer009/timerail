@@ -947,7 +947,8 @@ body.horiz .hint {
 #diary-input:focus { border-color: var(--focus-line); }
 #diary-input::placeholder { color: var(--muted-2); }
 .diary-meta {
-  display: flex; justify-content: space-between;
+  /* P3.44：只剩字数统计一项，靠右下角（“保存”提示由右上「已保存」独家承担） */
+  display: flex; justify-content: flex-end;
   margin-top: 6px;
   font-size: 11px; color: var(--muted-2);
   font-variant-numeric: tabular-nums;
