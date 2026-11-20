@@ -1133,11 +1133,11 @@ body.sheet-over-diary #backdrop { z-index: 75; }
 }
 .all-logs { list-style: none; margin-top: 4px; }
 .all-logs .row { padding: 8px 0; }
-body.sheet-over-diary .modal { z-index: 90; }
 
-/* 小记类型弹窗 */
+/* 小记类型弹窗（P3.48.1：z-index 必须高于记录页 70 / 全部记录 85，
+   否则在记录页里点「＋ 自定义」弹窗会被记录页盖住，看起来像没反应） */
 .modal {
-  position: fixed; inset: 0; z-index: 60;
+  position: fixed; inset: 0; z-index: 95;
   display: flex; align-items: center; justify-content: center;
   padding: 18px;
   background: var(--scrim);
