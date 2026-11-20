@@ -103,6 +103,9 @@
  *   - P3.47：全部记录页折叠 + 搜索——每天一张卡片默认收起（摘要行：日期星期 · 约N字 ·
  *           M条速记），点整行展开；顶部搜索框实时过滤（匹配长文 + 速记内容，天级命中即
  *           展开并标黄，拼音组合期间不触发）；「导出全部」仍导全部，不随搜索变
+ *   - P3.48：记录页版面重排——「记成」类型胶囊从管理面板搬到记录页速记区，与「今日速记」
+ *           同块常驻；长文框收为 34vh 定高，速记区吃满剩余高度并独立滚动；管理面板只留
+ *           批量选择删除（去掉类型行与输入框），速记统一从记录页底部输入
  */
 (function () {
 'use strict';
@@ -549,14 +552,11 @@ var startCustom = document.getElementById('start-custom');
 var logSheet = document.getElementById('log-sheet');
 var logTabs = document.getElementById('log-tabs');
 var logList = document.getElementById('log-list');
-var logForm = document.getElementById('log-form');
-var logInput = document.getElementById('log-input');
 var logSelectBtn = document.getElementById('log-select');
 var logSelBar = document.getElementById('log-selbar');
 var logSelCount = document.getElementById('log-selcount');
 var logSelAllBtn = document.getElementById('log-selall');
 var logSelDelBtn = document.getElementById('log-seldel');
-var logTypeRow = document.getElementById('log-type-row');
 var logLink = document.getElementById('log-link');
 var diaryPage = document.getElementById('diary-page');
 var diaryInput = document.getElementById('diary-input');
@@ -571,6 +571,7 @@ var installBtn = document.getElementById('install');
 
 var view = { date: shiftDateOf(new Date()), block: 0 };
 var activeSheet = null;
+var chooserBack = null;   // 确认框的下层面板：返回时切回它，不关闭整层（P3.48）
 
 /* ===== 渲染 ===== */
 /* 形状返回 -1..1 的归一化偏移；横向/竖向只是把它乘到不同轴上 */
@@ -1095,6 +1096,10 @@ function backOne() {
   if (!logTypeModal.hidden) { closeLogTypeDialog(); return true; }
   if (!calEl.hidden) { closeCal(); return true; }
   if (!onboardEl.hidden) { closeOnboarding(true); return true; }
+  /* 确认框按返回：系统已消耗下层共用条目，切回下层面板并补压一条，否则会少一层 */
+  if (activeSheet === chooser && chooserBack) {
+    var cb = chooserBack; chooserBack = null; restoreSheet(cb); navPush(); return true;
+  }
   if (activeSheet) { hideSheet(); return true; }
   if (allOpen) { closeAll(); return true; }
   if (diaryOpen) { closeDiary(); return true; }
@@ -1139,6 +1144,7 @@ function showSheet(s) {
 }
 function hideSheet() {
   var had = !!activeSheet;
+  chooserBack = null;
   if (logSelMode) { logSelMode = false; logSelIds = {}; }
   if (activeSheet) {
     activeSheet.classList.remove('open');
@@ -1148,6 +1154,26 @@ function hideSheet() {
   backdrop.classList.remove('open');
   document.body.classList.remove('sheet-over-diary');
   if (had) navDrop();
+}
+
+/* 确认框浮在下层面板之上、共用同一条 history 条目（打开时不 push）。
+ * 选项点击直接切回下层：不 back() 也不 push。若走 hideSheet() + showSheet()，
+ * 「back 回声 + 立刻 push」会落在同一同步栈里，Chrome 会合并成跨条目遍历（P3.48 实测） */
+function restoreSheet(s) {
+  chooserBack = null;
+  if (logSelMode) { logSelMode = false; logSelIds = {}; }
+  if (activeSheet && activeSheet !== s) {
+    activeSheet.classList.remove('open');
+    activeSheet.setAttribute('aria-hidden', 'true');
+  }
+  activeSheet = s;
+  if (s === logSheet) {
+    renderLog();
+    document.body.classList.add('sheet-over-diary');
+  }
+  s.classList.add('open');
+  s.setAttribute('aria-hidden', 'false');
+  backdrop.classList.add('open');
 }
 
 function openBlock(i) {
@@ -1257,6 +1283,7 @@ function toggleDone(it) {
 /* 通用选择器 */
 var chooserCb = null;
 function choose(title, opts, cb) {
+  chooserBack = null;   // 普通选择器不是确认框，返回时整层关闭
   document.getElementById('chooser-title').textContent = title;
   document.getElementById('chooser-msg').hidden = true;   // 选择器与确认框共用一个面板
   var ul = document.getElementById('chooser-list');
@@ -1284,6 +1311,7 @@ function choose(title, opts, cb) {
 /* 确认面板：替代原生 confirm()。backSheet = 点"取消"后回到哪个面板 */
 function confirmBox(title, msg, okText, onOk, backSheet, cancelText) {
   chooserCb = null;   // 清掉上一个选择器可能残留的回调
+  chooserBack = backSheet || null;
   document.getElementById('chooser-title').textContent = title;
   var msgEl = document.getElementById('chooser-msg');
   msgEl.textContent = msg;
@@ -1296,10 +1324,15 @@ function confirmBox(title, msg, okText, onOk, backSheet, cancelText) {
     b.type = 'button';
     b.appendChild(el('span', '', o.t));
     b.addEventListener('click', function () {
-      hideSheet();
       msgEl.hidden = true;
+      /* 有下层面板就原地切回（条目不动）；没有才正常关闭并消耗条目 */
+      if (backSheet) {
+        restoreSheet(backSheet);
+        if (o.v && onOk) onOk();
+        return;
+      }
+      hideSheet();
       if (o.v && onOk) onOk();
-      else if (backSheet) showSheet(backSheet);
     });
     li.appendChild(b);
     ul.appendChild(li);
@@ -1535,8 +1568,6 @@ function syncLogSelUI() {
   logSelectBtn.setAttribute('aria-label', logSelMode ? '退出批量选择' : '批量选择小记');
   logSelectBtn.disabled = !list.length;
   logSelBar.hidden = !logSelMode;
-  logTypeRow.hidden = logSelMode;
-  logForm.hidden = logSelMode;
   logSelCount.textContent = '已选 ' + n + ' 条';
   logSelDelBtn.disabled = !n;
   logSelAllBtn.textContent = (n > 0 && n === list.length) ? '取消全选' : '全选';
@@ -1555,8 +1586,6 @@ function renderLog() {
   var lcount = logCount(key);
   document.getElementById('log-sub').textContent =
     fmtDay(key) + ' · ' + shiftOf(key).name;
-  logInput.placeholder = logType === 'review' ? '哪里可以更好一点…'
-    : (logType === 'custom' ? '随手记一句…' : '今天有什么值得记住的…');
 
   var list = data.logs[key] || [];
   // 列表空了就自动退出选择态；顺手清掉已不存在条目的选中标记
@@ -1695,7 +1724,8 @@ function saveLogType() {
   closeLogTypeDialog();
   renderLog();
   updateHeader();
-  logInput.focus();
+  syncDqHint();
+  dqInput.focus();
   toast(logTypeEditing ? '已更新小记类型' : '已添加「' + name + '」');
   haptic();
 }
@@ -1706,8 +1736,9 @@ logTabs.addEventListener('click', function (e) {
   if (b.dataset.type === 'custom-new') { openLogTypeDialog(false); return; }
   if (b.dataset.type === 'custom' && logType === 'custom') { openLogTypeDialog(true); return; }
   logType = (b.dataset.type === 'review' || b.dataset.type === 'custom') ? b.dataset.type : 'highlight';
-  renderLog();
-  logInput.focus();
+  renderLogTabs();
+  syncDqHint();
+  dqInput.focus();
 });
 
 logTypeEmojis.addEventListener('click', function (e) {
@@ -1727,34 +1758,12 @@ logTypeName.addEventListener('keydown', function (e) {
   if (e.key === 'Enter') { e.preventDefault(); saveLogType(); }
 });
 
-logForm.addEventListener('submit', function (e) {
-  e.preventDefault();
-  var text = logInput.value.trim().slice(0, 80);
-  if (!text) { logInput.focus(); return; }
-  var key = viewKey();
-  if (!data.logs[key]) data.logs[key] = [];
-  if (data.logs[key].length >= 100) { toast('这天的小记已经记满 100 条'); return; }
-  var entry = {
-    id: 'lg' + Date.now().toString(36) + Math.random().toString(36).slice(2, 4),
-    type: logType,
-    text: text,
-    createdAt: iso()
-  };
-  // 自定义分类：把当前的图标和名字写进条目，之后改类型不影响这条
-  if (logType === 'custom') {
-    var lcNow = data.settings.logCustom || { name: '闪光时刻', emoji: '✨' };
-    entry.emoji = lcNow.emoji;
-    entry.label = lcNow.name;
-  }
-  data.logs[key].push(entry);
-  saveData();
-  logInput.value = '';
-  renderLog();
-  renderDiaryLogs();
-  updateHeader();
-  logList.scrollTop = logList.scrollHeight;
-  haptic();
-});
+/* P3.48：「记成」类型与输入框搬到记录页，管理面板只保留选择删除。
+ * 速记输入框的提示随当前类型变化 */
+function syncDqHint() {
+  dqInput.placeholder = logType === 'review' ? '哪里可以更好一点…'
+    : (logType === 'custom' ? '随手记一句…' : '速记一句，如：今天终于跑完 5 公里');
+}
 
 /* ===== 记录页（P3.30 / P3.32 / P3.33）=====
  * 数据：data.diary[dateKey] = { text, updatedAt }，与事项/小记一样按查看日归属。
@@ -1820,6 +1829,7 @@ function renderDiary() {
   dqInput.value = '';
   /* P3.43：打开记录页就重建「记成」区，自定义第三按钮随配置出现/消失 */
   renderLogTabs();
+  syncDqHint();
   updateDiaryCount();
   renderDiaryLogs();
 }
@@ -1865,12 +1875,19 @@ dqForm.addEventListener('submit', function (e) {
   var key = viewKey();
   if (!data.logs[key]) data.logs[key] = [];
   if (data.logs[key].length >= 100) { toast('这天的小记已经记满 100 条'); return; }
-  data.logs[key].push({
+  var entry = {
     id: 'lg' + Date.now().toString(36) + Math.random().toString(36).slice(2, 4),
-    type: 'highlight',
+    type: logType,
     text: text,
     createdAt: iso()
-  });
+  };
+  // 自定义分类：把当前的图标和名字写进条目，之后改类型不影响这条
+  if (logType === 'custom') {
+    var lcNow = data.settings.logCustom || { name: '闪光时刻', emoji: '✨' };
+    entry.emoji = lcNow.emoji;
+    entry.label = lcNow.name;
+  }
+  data.logs[key].push(entry);
   saveData();
   dqInput.value = '';
   renderDiaryLogs();

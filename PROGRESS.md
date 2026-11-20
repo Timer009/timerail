@@ -2204,3 +2204,43 @@ iOS 侧滑返回是系统级手势，WebKit 自带页面转场（当前页跟手
 2. 输入中文必须处理 composition 事件：组合期间（打拼音）不过滤，`compositionend` 才筛，否则列表逐字母乱闪。
 3. 过滤后只渲染命中的天，输入过程渲染量小，不需要防抖。
 4. QA 坑：搜索词要避免在多天重复出现（如搜「书」同时命中 19 日速记和 18 日长文）；系统返回断言前要等程序性关闭的回声（~80ms）落地，否则两次 back 被 Chrome 合并（同 P3.46 的 ms 级交错，真实用户不可达）。
+
+---
+
+## P3.48 · 记录页版面重排 ✅ 2026-11-20
+
+### 需求（用户原话）
+
+> 切到写日记的页面那里的时候，要再点管理的时候才出来那个「记成」什么什么的小标签，不能这么做，要跟今日小记排在一起，并且把日记的大框框往上移一点，留出更多一点的空间给今日速记还有管理那些。然后管理里面只做选择删除这些。
+
+### 改动
+
+| 项 | 改法 |
+|---|---|
+| index.html | `#log-type-row` 移到记录页 `.diary-quick` 内（「今日速记」标题下、列表上）；`#dq-form` 移入同一块；`#log-sheet` 删掉类型行与输入框，只留标题/选择/✕ + `#log-list` + `#log-selbar` |
+| styles.css | `.diary-body` 改 `overflow:hidden`（分区滚动）；`#diary-input` 定高 `34vh` 且 **`flex:none`**；`.diary-quick` = `flex:1; min-height:0`；`.diary-logs` 自己 `overflow-y:auto`；标题行/类型行/输入框均 `flex:none` |
+| app.js | 删 `#log-form` 录入逻辑与 `logForm/logInput/logTypeRow` 变量；速记统一走 `#dq-form`（按当前 `logType` 入库，custom 带 emoji/label 快照）；新增 `syncDqHint()` 让占位提示跟随类型；`renderDiary`/切类型/`saveLogType` 后调用 |
+| 版本 | p3.48 三处 + 设置页注记 + sw CACHE/ASSETS |
+
+### 顺带修的竞态（P3.46 遗留）
+
+确认框（`#chooser`）与下层 sheet 共用一条 history 条目。原实现里选项点击是 `hideSheet()`（back 消费条目）+ onOk 内 `showSheet()`（push），两者落在同一个同步栈、间隔 0ms，Chrome 会合并成跨条目遍历，**把顶层页卸载**（QA 实测 `TOP-BEFORE-UNLOAD`）。
+
+修复：新增 `restoreSheet(s)` —— 关确认框、切回下层面板，完全不碰 history；`confirmBox` 记录 `chooserBack`，系统返回关确认框时 `restoreSheet(chooserBack) + navPush()` 补回被系统消耗的那一条（否则少一层、下层面板失遮罩）。7 处 `confirmBox` 调用全部传 `backSheet`。
+
+### 验收（25 项断言全过 / ALLPASS）
+
+- ✅ A 记录页：「记成」类型行在 `#diary-page` 内常驻可见、3 个胶囊、长文框 287px（≈34vh）、速记列表剩余 253px
+- ✅ B 点「温故知新」变选中，`#dq-input` 占位提示跟随
+- ✅ C 从记录页记 review 速记，行数 3、徽标「📝 温故知新」
+- ✅ D 管理面板：无输入框、无类型行、有选择/全选/删除
+- ✅ E 勾选 → 删除 → 确认框 → 剩 2 条 → 关面板回记录页
+- ✅ G 单条删除确认框 → 系统返回切回管理面板（不残留、不丢数据）→ 再返回关面板、条目已补回
+- ✅ F 系统返回关记录页回时间轨，`history.state` 已清空
+
+### 坑
+
+1. `#diary-input` 原来是 `flex:1`，会覆盖 `height:34vh`（实测落成 min-height 200px）；定高必须配 `flex:none`。
+2. `renderLogTabs()` 会重建按钮节点，QA 点完必须重新 `querySelector` 再断言 class，否则拿到的是已替换的旧引用。
+3. QA 两次 `history.back()` 间隔 <80ms（以及「关面板 → 0ms 重开」）会被 Chrome 合并成跨条目遍历，条目数全错位；断言前要等回声落地（本次用 400ms 稳定等待）。真实用户不可能这个节奏，产品侧无需处理。
+4. 别在隐藏面板里点按钮做 QA——真实用户点不到，且会把历史条目算歪。

@@ -931,14 +931,16 @@ body.horiz .hint {
   max-width: 480px;
   margin: 0 auto;
   padding: 14px 16px calc(14px + env(safe-area-inset-bottom));
-  overflow-y: auto;
+  overflow: hidden;   /* P3.48：改为内部分区滚动，长文框固定高度，速记区吃满剩余空间 */
   overscroll-behavior: contain;
 }
-.diary-write { flex: 1 1 auto; min-height: 50vh; display: flex; flex-direction: column; }
+/* P3.48：长文框定高往上收（34vh），把空间让给下方速记与管理 */
+.diary-write { flex: none; display: flex; flex-direction: column; }
 #diary-input {
-  flex: 1;
+  flex: none;
   width: 100%;
-  min-height: 46vh;
+  height: 34vh;
+  min-height: 200px;
   padding: 13px 14px;
   border-radius: 14px;
   border: 1px solid var(--line);
@@ -961,13 +963,25 @@ body.horiz .hint {
   font-variant-numeric: tabular-nums;
 }
 
-.diary-quick { flex: none; }
+/* P3.48：速记区吃满剩余高度，类型行与输入框固定，列表自己滚 */
+.diary-quick { flex: 1; min-height: 0; display: flex; flex-direction: column; }
 .diary-qhead {
+  flex: none;
   display: flex; align-items: center; justify-content: space-between;
   margin-bottom: 4px;
 }
 .diary-qhead > span { font-size: 13px; font-weight: 500; color: var(--text-2); }
-.diary-logs { list-style: none; }
+.diary-quick .log-type-row { flex: none; padding: 2px 0 6px; }
+.diary-quick .log-tabs { padding-bottom: 0; }
+.diary-quick .addbar { flex: none; }
+.diary-logs {
+  list-style: none;
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  -webkit-overflow-scrolling: touch;
+}
 .diary-logs .row { padding: 8px 0; }
 .diary-logs .empty-row { padding: 14px 0; }
 

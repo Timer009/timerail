@@ -27,10 +27,10 @@
   if (m) m.setAttribute('content', light ? '#f5f8fc' : '#0e131f');
 })();
 </script>
-<link rel="manifest" href="manifest.webmanifest?v=p3.47">
+<link rel="manifest" href="manifest.webmanifest?v=p3.48">
 <link rel="icon" type="image/png" sizes="192x192" href="icon-192.png">
 <link rel="apple-touch-icon" href="apple-touch-icon.png">
-<link rel="stylesheet" href="styles.css?v=p3.47">
+<link rel="stylesheet" href="styles.css?v=p3.48">
 </head>
 <body>
 
@@ -156,6 +156,14 @@
         <span>今日速记</span>
         <button type="button" class="ghost mini" id="diary-manage">管理</button>
       </div>
+      <!-- 记成类型（P3.48）：常驻在速记区，跟「今日速记」同一块，不再藏在管理面板里 -->
+      <div class="log-type-row" id="log-type-row">
+        <span class="log-type-label">记成</span>
+        <div class="log-tabs" id="log-tabs">
+          <button type="button" data-type="highlight" class="active">💡 灵光一闪</button>
+          <button type="button" data-type="review">📝 温故知新</button>
+        </div>
+      </div>
       <ul class="diary-logs" id="diary-logs"></ul>
       <form class="addbar" id="dq-form">
         <input id="dq-input" type="text" maxlength="80" placeholder="速记一句，如：今天终于跑完 5 公里" autocomplete="off">
@@ -231,7 +239,7 @@
   <ul class="list" id="pool-list"></ul>
 </section>
 
-<!-- 今日小记 -->
+<!-- 今日小记 · 管理面板（P3.48）：只做批量选择与删除，记成/输入在记录页里 -->
 <section class="sheet" id="log-sheet" aria-hidden="true">
   <div class="sheet-head">
     <div>
@@ -250,17 +258,6 @@
     <span class="selcount" id="log-selcount">已选 0 条</span>
     <button type="button" class="ghost mini danger" id="log-seldel" disabled>删除</button>
   </div>
-  <div class="log-type-row" id="log-type-row">
-    <span class="log-type-label">记成</span>
-    <div class="log-tabs" id="log-tabs">
-      <button type="button" data-type="highlight" class="active">💡 灵光一闪</button>
-      <button type="button" data-type="review">📝 温故知新</button>
-    </div>
-  </div>
-  <form class="addbar" id="log-form">
-    <input id="log-input" type="text" maxlength="80" placeholder="今天有什么值得记住的…" autocomplete="off">
-    <button class="primary" type="submit">记</button>
-  </form>
 </section>
 
 <!-- 新建 / 修改自定义小记类型 -->
@@ -367,7 +364,7 @@
       <button type="button" class="ghost danger" id="reset">清空全部数据</button>
     </div>
 
-    <div class="note">数据仅保存在本机浏览器中 · 版本 P3.47 (2026-11-20)</div>
+    <div class="note">数据仅保存在本机浏览器中 · 版本 P3.48 (2026-11-20)</div>
   </div>
 </section>
 
@@ -389,6 +386,6 @@
 </div>
 
 <div id="toast"></div>
-<script src="app.js?v=p3.47"></script>
+<script src="app.js?v=p3.48"></script>
 </body>
 </html>
