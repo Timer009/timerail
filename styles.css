@@ -877,6 +877,13 @@ body.horiz .hint {
 .log-row.picked .sel-check { background: var(--done); border-color: var(--done); color: var(--done-ink); }
 .log-row.picked .log-text { color: var(--muted); }
 
+/* ===== 系统返回瞬时关闭（P3.46.1）=====
+ * iOS 侧滑返回时 WebKit 自带页面转场（截图层交换），popstate 到达后再跑一遍
+ * CSS 关闭动画会与系统转场重叠，截图层回收出错留残影。popstate 关闭期间由
+ * app.js 给根节点临时挂 nav-instant 禁掉过渡直接跳终态；用户主动关闭
+ * （Esc / ‹ / X / 滑条）不走本类，动画保留 */
+.nav-instant *, .nav-instant *::before, .nav-instant *::after { transition: none !important; }
+
 /* ===== 记录页（P3.30）=====
  * 整页从左侧滑入，右滑打开时跟手；顶部同样留 64px 安全垫，避开 iOS 主屏的
  * 低比例栅格化带（与 .topbar 同理）。 */

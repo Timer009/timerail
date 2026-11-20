@@ -2132,3 +2132,33 @@ P3.42 实机后用户二轮调整：💡 文字改「灵光一闪」（已定）
 3. **popstate 回声异步 ~80ms**：断言需轮询等待，固定 sleep 会撞竞态。
 4. **致死交错（仅 QA 机器枪时序可触发）**：回声 + 排队补压 + QA 再 back 在 ms 级交错，Chrome 把两个 -1 合并成 -2 跨文档遍历，把 QA 顶层页导航杀掉；真实用户物理上不可能（<80ms 内 close→reopen→back）。修复在 QA 侧：setTimeout 补 400ms 延迟。
 5. **QA 信标方案**：headless dump-dom 不可靠（长期 0 字节），改 Image 请求发信标 → 本地 Python 服务器落盘（毫秒时间戳），绕开 chrome 输出通道；setTimeout 回调里的异常不进外层 try/catch，需 window error 信标兜底；信标到达毫秒级乱序，看时间戳不看行序。
+
+---
+
+## P3.46.1 · iOS 侧滑返回残影修复 ✅ 2026-11-20
+
+### 需求
+
+iOS 左边缘侧滑返回记录页：返回成功但留一层记录页残影；滑条路径（右滑去、左滑回）无此问题。
+
+### 根因
+
+iOS 侧滑返回是系统级手势，WebKit 自带页面转场（当前页跟手滑出、下方露上一状态截图层，转场完成后截图层淡出、露出真实页面）。popstate 到达后我们再跑一遍 0.26s CSS 关闭动画——两套动画重叠，截图层与真实页面交接出错，留残影。滑条路径无系统转场参与，动画独立跑完，所以干净。
+
+### 改动
+
+| 项 | 改法 |
+|---|---|
+| styles.css | 新增 `.nav-instant *, .nav-instant *::before, .nav-instant *::after { transition: none !important; }` |
+| app.js | popstate 关闭链：backOne 前给根节点挂 `nav-instant`（禁过渡直接跳终态），rAF 下一帧摘除——系统手势本身已提供返回的视觉过渡，我们再放动画是重复且致残影的 |
+| 不受影响 | Esc、左上 ‹、点 X、滑条等主动关闭路径的动画全部保留 |
+| 版本 | p3.46.1 三处 + 注记 |
+
+### 验收（22 项断言全过）
+
+- ✅ A5 新增断言：popstate 关闭后 nav-instant 已摘除（机制自清理）
+- ✅ A–E 全场景回归无破坏（面板 / 两层逐退 / 竞态 / 日历 / Esc 同链）
+
+### 说明
+
+瞬时跳终态安全的前提：所有关闭函数（hideSheet / closeDiary / closeAll / closeCal / closeLogTypeDialog / closeOnboarding）都是同步改 class/hidden，无 transitionend 监听或 setTimeout 延迟清理；visibility 过渡被禁用后直接 hidden，无中间态残留。

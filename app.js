@@ -97,6 +97,9 @@
  *   - P3.46：安卓侧边返回逐层退出——打开界面往 history 压条目，popstate = 关最上层（与 Esc 共用
  *           backOne 链）；程序性关闭时 back() 消费条目，根页面上按返回自然退出；关后极快重开
  *           先排队等回声落地再压栈（防幽灵条目）；iOS 不受影响
+ *   - P3.46.1：iOS 侧滑返回残影修复——系统手势自带页面转场（截图层交换），popstate 再跑 CSS
+ *           关闭动画会与截图层重叠留残影；系统返回驱动的关闭改瞬时跳终态（根节点临时挂
+ *           .nav-instant 禁过渡，下一帧摘除），Esc / ‹ / X / 滑条等主动关闭的动画不变
  */
 (function () {
 'use strict';
@@ -1110,8 +1113,11 @@ window.addEventListener('popstate', function () {
     return;
   }
   navPopping = true;
+  document.documentElement.classList.add('nav-instant');
   backOne();
   navPopping = false;
+  /* 关闭已同步到终态，下一帧摘掉：本帧内无过渡，与系统转场的截图层无缝衔接（P3.46.1） */
+  requestAnimationFrame(function () { document.documentElement.classList.remove('nav-instant'); });
 });
 
 function showSheet(s) {
