@@ -100,6 +100,9 @@
  *   - P3.46.1：iOS 侧滑返回残影修复——系统手势自带页面转场（截图层交换），popstate 再跑 CSS
  *           关闭动画会与截图层重叠留残影；系统返回驱动的关闭改瞬时跳终态（根节点临时挂
  *           .nav-instant 禁过渡，下一帧摘除），Esc / ‹ / X / 滑条等主动关闭的动画不变
+ *   - P3.47：全部记录页折叠 + 搜索——每天一张卡片默认收起（摘要行：日期星期 · 约N字 ·
+ *           M条速记），点整行展开；顶部搜索框实时过滤（匹配长文 + 速记内容，天级命中即
+ *           展开并标黄，拼音组合期间不触发）；「导出全部」仍导全部，不随搜索变
  */
 (function () {
 'use strict';
@@ -2074,6 +2077,8 @@ document.getElementById('export-all-txt').addEventListener('click', function () 
 var allPage = document.getElementById('all-page');
 var allBody = document.getElementById('all-body');
 var allSub = document.getElementById('all-sub');
+var allQ = document.getElementById('all-q');
+var allQClear = document.getElementById('all-q-clear');
 var allOpen = false;
 
 function allDays() {
@@ -2083,21 +2088,65 @@ function allDays() {
   return Object.keys(seen).filter(function (k) { return !!dayText(k); }).sort().reverse();
 }
 
+/* 当天的可搜索正文（长文 + 速记内容），小写化；类型名不算内容，不进索引 */
+function allHaystack(k) {
+  var parts = [];
+  var rec = data.diary[k];
+  if (rec && rec.text) parts.push(rec.text);
+  (data.logs[k] || []).forEach(function (lg) { parts.push(lg.text || ''); });
+  return parts.join('\n').toLowerCase();
+}
+
+/* 按命中词切段渲染：命中段套 <mark>。不用 innerHTML 拼接，
+ * 用户文本里的 < & 永远不会被当成标签解析 */
+function appendHl(parent, text, q) {
+  text = String(text == null ? '' : text);
+  if (!q) { parent.appendChild(document.createTextNode(text)); return; }
+  var lower = text.toLowerCase();
+  var i = 0, idx;
+  while ((idx = lower.indexOf(q, i)) >= 0) {
+    if (idx > i) parent.appendChild(document.createTextNode(text.slice(i, idx)));
+    parent.appendChild(el('mark', 'all-hl', text.slice(idx, idx + q.length)));
+    i = idx + q.length;
+  }
+  if (i < text.length) parent.appendChild(document.createTextNode(text.slice(i)));
+}
+
 function renderAll() {
+  var raw = allQ.value || '';
+  var q = raw.trim().toLowerCase();
+  allQClear.hidden = !raw;
   allBody.innerHTML = '';
   var keys = allDays();
-  allSub.textContent = keys.length ? '共 ' + keys.length + ' 天' : '';
+  if (q) {
+    keys = keys.filter(function (k) { return allHaystack(k).indexOf(q) >= 0; });
+  }
   if (!keys.length) {
-    allBody.appendChild(el('div', 'all-empty', '还没有任何记录'));
+    allSub.textContent = q ? '找到 0 天' : '';
+    allBody.appendChild(el('div', 'all-empty', q ? '没有找到含「' + raw.trim() + '」的记录' : '还没有任何记录'));
     return;
   }
+  allSub.textContent = q ? '找到 ' + keys.length + ' 天' : '共 ' + keys.length + ' 天';
   keys.forEach(function (k) {
     var d = parseKey(k);
     if (!d) return;
     var week = ['周日', '周一', '周二', '周三', '周四', '周五', '周六'][d.getDay()];
+    var rec = data.diary[k];
+    var logs = data.logs[k] || [];
+    var hasText = !!(rec && rec.text && rec.text.trim());
     var card = el('article', 'all-card');
     var head = el('div', 'all-card-head');
-    head.appendChild(el('span', 'all-card-date', ymd(d) + ' ' + week));
+    var tg = el('button', 'all-card-toggle');
+    tg.type = 'button';
+    var meta = el('div', 'all-card-meta');
+    meta.appendChild(el('span', 'all-card-date', ymd(d) + ' ' + week));
+    var bits = [];
+    if (hasText) bits.push('约 ' + rec.text.trim().length + ' 字');
+    if (logs.length) bits.push(logs.length + ' 条速记');
+    meta.appendChild(el('span', 'all-card-sum', bits.join(' · ')));
+    tg.appendChild(meta);
+    tg.appendChild(el('span', 'all-caret'));
+    head.appendChild(tg);
     var ex = el('button', 'ghost mini');
     ex.type = 'button';
     ex.textContent = '导出';
@@ -2108,35 +2157,53 @@ function renderAll() {
     });
     head.appendChild(ex);
     card.appendChild(head);
-    var rec = data.diary[k];
-    if (rec && rec.text && rec.text.trim()) {
-      card.appendChild(el('div', 'all-sec', '【记录】'));
-      card.appendChild(el('div', 'all-text', rec.text));
+
+    var body = el('div', 'all-card-body');
+    /* 搜索命中即展开：搜索结果就是要看内容 */
+    body.hidden = !q;
+    tg.setAttribute('aria-expanded', q ? 'true' : 'false');
+    if (q) card.classList.add('open');
+    tg.addEventListener('click', function () {
+      var show = body.hidden;
+      body.hidden = !show;
+      card.classList.toggle('open', show);
+      tg.setAttribute('aria-expanded', show ? 'true' : 'false');
+      haptic();
+    });
+
+    if (hasText) {
+      body.appendChild(el('div', 'all-sec', '【记录】'));
+      var tEl = el('div', 'all-text');
+      appendHl(tEl, rec.text, q);
+      body.appendChild(tEl);
     }
-    var logs = data.logs[k] || [];
     if (logs.length) {
-      card.appendChild(el('div', 'all-sec', '【速记】'));
+      body.appendChild(el('div', 'all-sec', '【速记】'));
       var ul = el('ul', 'all-logs');
       logs.forEach(function (lg) {
-        var meta = logMeta(lg.type, lg);
+        var metaLg = logMeta(lg.type, lg);
         var li = el('li', 'row log-row');
-        li.appendChild(el('span', 'log-badge ' + meta.cls, meta.label));
-        var body = el('div', 'log-body');
-        body.appendChild(el('div', 'log-text', lg.text));
+        li.appendChild(el('span', 'log-badge ' + metaLg.cls, metaLg.label));
+        var b = el('div', 'log-body');
+        var tx = el('div', 'log-text');
+        appendHl(tx, lg.text, q);
+        b.appendChild(tx);
         var t = new Date(lg.createdAt);
         var clock = isNaN(t.getTime()) ? '' : pad(t.getHours()) + ':' + pad(t.getMinutes());
-        body.appendChild(el('div', 'log-time', clock ? clock + ' 记录' : '记录'));
-        li.appendChild(body);
+        b.appendChild(el('div', 'log-time', clock ? clock + ' 记录' : '记录'));
+        li.appendChild(b);
         ul.appendChild(li);
       });
-      card.appendChild(ul);
+      body.appendChild(ul);
     }
+    card.appendChild(body);
     allBody.appendChild(card);
   });
 }
 
 function openAll() {
   if (allOpen) return;
+  allQ.value = '';   // 每次进来都是干净列表，不残留上次的搜索词
   renderAll();
   allPage.classList.add('open');
   allPage.setAttribute('aria-hidden', 'false');
@@ -2155,6 +2222,19 @@ function closeAll() {
 
 document.getElementById('diary-all').addEventListener('click', openAll);
 document.getElementById('all-close').addEventListener('click', closeAll);
+/* 搜索输入（P3.47）：拼音组合期间不过滤，选字上屏后才筛，避免打拼音时列表乱闪 */
+var allQComposing = false;
+allQ.addEventListener('compositionstart', function () { allQComposing = true; });
+allQ.addEventListener('compositionend', function () { allQComposing = false; renderAll(); });
+allQ.addEventListener('input', function () {
+  if (allQComposing) return;
+  renderAll();
+});
+allQClear.addEventListener('click', function () {
+  allQ.value = '';
+  renderAll();
+  allQ.focus();
+});
 /* 导出全部 = 设置里那个按钮的原逻辑，直接复用，不抄第二份 */
 document.getElementById('all-export').addEventListener('click', function () {
   document.getElementById('export-all-txt').click();

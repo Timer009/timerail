@@ -27,10 +27,10 @@
   if (m) m.setAttribute('content', light ? '#f5f8fc' : '#0e131f');
 })();
 </script>
-<link rel="manifest" href="manifest.webmanifest?v=p3.46.1">
+<link rel="manifest" href="manifest.webmanifest?v=p3.47">
 <link rel="icon" type="image/png" sizes="192x192" href="icon-192.png">
 <link rel="apple-touch-icon" href="apple-touch-icon.png">
-<link rel="stylesheet" href="styles.css?v=p3.46.1">
+<link rel="stylesheet" href="styles.css?v=p3.47">
 </head>
 <body>
 
@@ -177,6 +177,16 @@
       <div class="all-sub" id="all-sub">—</div>
     </div>
     <button type="button" class="ghost mini" id="all-export">导出全部</button>
+  </div>
+  <!-- 搜索（P3.47）：天级过滤，命中即展开当日卡片并标黄；输入法组合期间不触发过滤 -->
+  <div class="all-search">
+    <div class="all-search-box">
+      <svg class="all-search-ic" viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="6.5"/><path d="M16 16l5 5"/></svg>
+      <input id="all-q" type="text" placeholder="搜索记录内容" autocomplete="off" autocorrect="off" spellcheck="false" enterkeyhint="search">
+      <button type="button" class="all-q-clear" id="all-q-clear" aria-label="清空搜索" hidden>
+        <svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg>
+      </button>
+    </div>
   </div>
   <div class="all-body" id="all-body"></div>
 </section>
@@ -357,7 +367,7 @@
       <button type="button" class="ghost danger" id="reset">清空全部数据</button>
     </div>
 
-    <div class="note">数据仅保存在本机浏览器中 · 版本 P3.46.1 (2026-11-20)</div>
+    <div class="note">数据仅保存在本机浏览器中 · 版本 P3.47 (2026-11-20)</div>
   </div>
 </section>
 
@@ -379,6 +389,6 @@
 </div>
 
 <div id="toast"></div>
-<script src="app.js?v=p3.46.1"></script>
+<script src="app.js?v=p3.47"></script>
 </body>
 </html>

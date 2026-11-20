@@ -1019,6 +1019,50 @@ body.sheet-over-diary #backdrop { z-index: 75; }
   gap: 14px;
 }
 .all-empty { padding: 48px 0; text-align: center; color: var(--muted-2); font-size: 13px; }
+/* 搜索栏（P3.47）：宽度与列表对齐，圆角输入框 */
+.all-search { flex: none; width: 100%; max-width: 480px; margin: 0 auto; padding: 10px 16px 0; }
+.all-search-box {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  height: 38px;
+  padding: 0 10px;
+  border: 1px solid var(--line);
+  border-radius: 11px;
+  background: var(--panel-2);
+}
+.all-search-ic { flex: none; width: 17px; height: 17px; color: var(--muted); }
+#all-q {
+  flex: 1;
+  min-width: 0;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  outline: 0;
+  background: transparent;
+  color: var(--text);
+  font-size: 14px;
+  font-family: inherit;
+}
+#all-q::placeholder { color: var(--muted-2); }
+.all-q-clear {
+  flex: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  padding: 0;
+  margin: 0;
+  border: 0;
+  border-radius: 50%;
+  background: var(--line-soft);
+  color: var(--muted);
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+.all-q-clear[hidden] { display: none; }
+.all-q-clear svg { width: 12px; height: 12px; }
 .all-card {
   border: 1px solid var(--line);
   border-radius: 14px;
@@ -1028,10 +1072,42 @@ body.sheet-over-diary #backdrop { z-index: 75; }
 .all-card-head {
   display: flex;
   align-items: center;
-  justify-content: space-between;
-  gap: 8px;
+  gap: 6px;
 }
+/* 折叠开关（P3.47）：整块可点，箭头纯 CSS 画（无字符图标） */
+.all-card-toggle {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+.all-card-meta { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 1px; }
+.all-caret { flex: none; width: 14px; display: flex; align-items: center; justify-content: center; color: var(--muted); }
+.all-caret::before {
+  content: '';
+  width: 6px;
+  height: 6px;
+  border-right: 1.6px solid currentColor;
+  border-bottom: 1.6px solid currentColor;
+  transform: rotate(-45deg);
+  transition: transform .18s;
+}
+.all-card.open .all-caret::before { transform: rotate(45deg); }
+.all-card-body[hidden] { display: none; }
+/* 命中高亮：半透明黄底，深浅主题都可读 */
+.all-hl { background: rgba(255, 214, 102, .35); color: inherit; border-radius: 3px; padding: 0 1px; }
 .all-card-date { font-size: 14px; font-weight: 600; color: var(--text); }
+.all-card-sum { font-size: 12px; line-height: 16px; color: var(--muted); }
 .all-sec { margin-top: 10px; font-size: 12px; font-weight: 500; color: var(--muted); }
 .all-text {
   margin-top: 6px;
