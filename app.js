@@ -111,9 +111,9 @@
  *   - P3.49：全部记录改为「点卡片进单日阅读页」——列表不再原地展开，点任意一天（含
  *           搜索结果）进入整页阅读，长文与速记完整展示，搜索命中词继续标黄；返回按钮
  *           或系统返回都回到原列表，搜索词与滚动位置保留（列表不重渲染）
- *   - P3.50：轨道风格重排——删掉与蛇形重复的「大弧」（旧数据 arc → wave），新增
- *           「矩形 / 圆形」两种闭环；闭环按可视区画一圈、起点顶边中点顺时针，纵横
- *           切换形状不变；环上只放状态圆点（点节点看时段详情），时间每 2 小时标一次
+ *   - P3.50：轨道风格重排——删掉与蛇形重复的「大弧」（旧数据 arc → wave）
+ *   - P3.50.1：矩形 / 圆形两种闭环下线（观感不佳），风格回到蛇形 / 直线 / 折线
+ *           三种；旧存档里的 rect / circle 与 arc 一样折回蛇形
  */
 (function () {
 'use strict';
@@ -205,13 +205,10 @@ function snapStatus(v) { return ['todo', 'doing', 'done', 'missed', 'canceled'].
 var SHAPES = {
   wave:   { amp: 0.22, cycles: 2 },      // 蛇形：全天两个来回，坡度更缓
   rail:   { amp: 0 },                    // 直线：轨道靠左，事项统一向右展开
-  zigzag: { amp: 0.21 },                 // 折线：每 2 小时折一次（拐角带圆角）
-  rect:   { loop: 1 },                   // 矩形闭环：P3.50
-  circle: { loop: 1 }                    // 圆形闭环：P3.50
+  zigzag: { amp: 0.21 }                  // 折线：每 2 小时折一次（拐角带圆角）
 };
-/* P3.50：大弧与蛇形重复，已删除；旧数据里的 arc 一律折回蛇形 */
+/* P3.50 删掉与蛇形重复的大弧；P3.50.1 撤掉矩形/圆形闭环。旧数据一律折回蛇形 */
 function snapStyle(v) {
-  if (v === 'arc') return 'wave';
   return SHAPES[v] ? v : 'wave';
 }
 function snapOrient(v) { return v === 'h' ? 'h' : 'v'; }
@@ -590,7 +587,7 @@ var chooserBack = null;   // 确认框的下层面板：返回时切回它，不
 /* 形状返回 -1..1 的归一化偏移；横向/竖向只是把它乘到不同轴上 */
 function shapeUnit(i, B) {
   var st = cfg().trackStyle;
-  if (!SHAPES[st] || SHAPES[st].loop || st === 'rail') return 0;
+  if (!SHAPES[st] || st === 'rail') return 0;
   if (st === 'zigzag') {
     var half = Math.max(1, Math.round(120 / cfg().granularity));   // 每 2 小时一个折点
     var t = (i % (half * 2)) / half;
@@ -671,9 +668,7 @@ function moodLabel(lb, mood) {
 function render() {
   var h = isHoriz();
   document.body.classList.toggle('horiz', h);
-  /* P3.50：矩形 / 圆形是闭环，纵横切换时形状不变（用可视区画，不随方向拉伸） */
-  if (SHAPES[cfg().trackStyle] && SHAPES[cfg().trackStyle].loop) renderLoop();
-  else if (h) renderH(); else renderV();
+  if (h) renderH(); else renderV();
 }
 
 function renderV() {
@@ -952,180 +947,6 @@ function renderH() {
   if (!itemsOfDay().length) {
     var vk = viewKey(), tk = todayKey();
     layer.appendChild(el('div', 'hint',
-      vk === tk ? '今天还空着 · 点任意时段加第一件事'
-        : vk < tk ? '这天没有记录 · 过去的日子只做留档'
-        : '这天还空着 · 可以先排几件事'));
-  }
-
-  updateHeader();
-}
-
-/* ===== 闭环轨道（P3.50）：矩形 / 圆形 =====
- * 用可视区本身画一圈，纵横向共用同一套几何（切换方向时形状不变）。
- * 起点在顶边中点，顺时针；节点 i 落在 i/B 处，最后一段闭回起点。
- * 闭环上只放状态圆点，点节点弹出时段详情看事项；时间每 2 小时标一次。
- */
-var LOOP_PAD = 46;
-
-function loopCirclePts(W, H, n) {
-  var cx = W / 2, cy = H / 2;
-  var r = Math.max(40, Math.min(W, H) / 2 - LOOP_PAD);
-  var pts = [];
-  for (var i = 0; i < n; i++) {
-    var a = -Math.PI / 2 + (i / n) * Math.PI * 2;
-    pts.push({ x: cx + r * Math.cos(a), y: cy + r * Math.sin(a) });
-  }
-  return pts;
-}
-
-function loopRectPts(W, H) {
-  var cx = W / 2, cy = H / 2;
-  var a = Math.max(40, W / 2 - LOOP_PAD);
-  var b = Math.max(40, H / 2 - LOOP_PAD);
-  var rc = Math.min(24, a * 0.4, b * 0.4);
-  var pts = [];
-  function line(x0, y0, x1, y1, n) {
-    for (var i = 0; i < n; i++) {
-      var u = i / n;
-      pts.push({ x: x0 + (x1 - x0) * u, y: y0 + (y1 - y0) * u });
-    }
-  }
-  function arc(ax, ay, a0, a1, n) {
-    for (var i = 0; i < n; i++) {
-      var ang = a0 + (a1 - a0) * (i / n);
-      pts.push({ x: ax + rc * Math.cos(ang), y: ay + rc * Math.sin(ang) });
-    }
-  }
-  var NX = 80, NY = 80, NA = 14;
-  line(cx, cy - b, cx + a - rc, cy - b, NX);
-  arc(cx + a - rc, cy - b + rc, -Math.PI / 2, 0, NA);
-  line(cx + a, cy - b + rc, cx + a, cy + b - rc, NY);
-  arc(cx + a - rc, cy + b - rc, 0, Math.PI / 2, NA);
-  line(cx + a - rc, cy + b, cx - a + rc, cy + b, NX);
-  arc(cx - a + rc, cy + b - rc, Math.PI / 2, Math.PI, NA);
-  line(cx - a, cy + b - rc, cx - a, cy - b + rc, NY);
-  arc(cx - a + rc, cy - b + rc, Math.PI, Math.PI * 1.5, NA);
-  line(cx - a + rc, cy - b, cx, cy - b, NX);
-  return pts;
-}
-
-/* 采样点 + 累计弧长，提供按比例取点 */
-function loopGeom(W, H) {
-  var st = cfg().trackStyle;
-  var pts = st === 'circle' ? loopCirclePts(W, H, 480) : loopRectPts(W, H);
-  var cum = [0];
-  for (var i = 1; i <= pts.length; i++) {
-    var p0 = pts[i - 1], p1 = pts[i % pts.length];
-    cum.push(cum[i - 1] + Math.hypot(p1.x - p0.x, p1.y - p0.y));
-  }
-  var total = cum[cum.length - 1];
-  return {
-    pts: pts,
-    total: total,
-    at: function (u) {
-      u = ((u % 1) + 1) % 1;
-      var target = u * total;
-      var lo = 0, hi = cum.length - 1;
-      while (lo < hi - 1) {
-        var mid = (lo + hi) >> 1;
-        if (cum[mid] <= target) lo = mid; else hi = mid;
-      }
-      var segLen = cum[hi] - cum[lo] || 1;
-      var k = (target - cum[lo]) / segLen;
-      var a = this.pts[lo], b = this.pts[hi % this.pts.length];
-      return { x: a.x + (b.x - a.x) * k, y: a.y + (b.y - a.y) * k };
-    },
-    /* 一段 [u0,u1] 的折线路径，用于 SVG 分段着色 */
-    pathOf: function (u0, u1) {
-      var steps = 10;
-      var d = '';
-      for (var s = 0; s <= steps; s++) {
-        var p = this.at(u0 + (u1 - u0) * (s / steps));
-        d += (s ? ' L ' : 'M ') + p.x.toFixed(1) + ' ' + p.y.toFixed(1);
-      }
-      return d;
-    }
-  };
-}
-
-function renderLoop() {
-  var g = cfg().granularity, B = blocks();
-  /* 竖向 #track 有 480 上限，闭环两边都按 480 收，宽屏下不会画到容器外面 */
-  var W = Math.min(wrap.clientWidth || 360, 480);
-  var H = wrap.clientHeight || 520;
-  track.style.width = W + 'px';
-  track.style.height = H + 'px';
-  svg.innerHTML = '';
-  layer.innerHTML = '';
-  svg.setAttribute('width', W);
-  svg.setAttribute('height', H);
-  svg.setAttribute('viewBox', '0 0 ' + W + ' ' + H);
-
-  var geom = loopGeom(W, H);
-  var cx = W / 2, cy = H / 2;
-  var spacing = geom.total / B;
-  var nodeD = Math.max(16, Math.min(34, spacing * 0.8));
-
-  // 环形轨道：每段一个 path，沿用时段状态色与部分完成叠色
-  for (var i = 0; i < B; i++) {
-    var list = itemsInBlock(i);
-    var p = document.createElementNS('http://www.w3.org/2000/svg', 'path');
-    p.setAttribute('d', geom.pathOf(i / B, (i + 1) / B));
-    p.setAttribute('class', 'seg st-' + blockState(i, list));
-    svg.appendChild(p);
-    addProgress(p, list);
-  }
-
-  var nowBlock = isToday() ? Math.floor(nowOffset() / g) : -1;
-
-  for (i = 0; i < B; i++) {
-    var pos = geom.at(i / B);
-    var st = blockState(i, itemsInBlock(i)), clock = blockStartClock(i);
-    /* 外法向：从中心指向节点，用来把时间标签往外推 */
-    var nx = pos.x - cx, ny = pos.y - cy, nl = Math.hypot(nx, ny) || 1;
-    nx /= nl; ny /= nl;
-
-    var nd = el('button', 'node st-' + st + (i === nowBlock ? ' now' : ''));
-    nd.type = 'button';
-    nd.style.left = pos.x + 'px';
-    nd.style.top = pos.y + 'px';
-    nd.style.width = nodeD + 'px';
-    nd.style.height = nodeD + 'px';
-    var list2 = itemsInBlock(i), txt = '';
-    if (nodeD >= 22) {
-      if (list2.length > 1) {
-        var dn = list2.filter(function (it) { return it.status === 'done'; }).length;
-        txt = dn + '/' + list2.length;
-        nd.style.fontSize = Math.round(nodeD * 0.26) + 'px';
-      } else if (list2.length === 1) {
-        txt = GLYPH[st] || '';
-        nd.style.fontSize = Math.round(nodeD * 0.34) + 'px';
-      }
-    }
-    nd.textContent = txt;
-    nd.setAttribute('aria-label', fmt(clock) + ' 时段' + (list2.length ? '，' + list2.length + ' 项' : ''));
-    (function (bi) { nd.addEventListener('click', function () { openBlock(bi); }); })(i);
-    layer.appendChild(nd);
-
-    /* 时间每 2 小时标一次，避免 30 分钟粒度下糊成一片 */
-    if (clock % 120 === 0) {
-      var lb = moodLabel(el('span', 'tlabel loop' +
-        (clock % 60 === 0 ? ' hour' : '') +
-        (clock < viewStart() ? ' second' : ''), fmt(clock)), blockMood(i, list2));
-      /* 标签横向居中于推出去的点，左右极值处会探出容器：x 夹回内边界 */
-      var lx = pos.x + nx * (nodeD / 2 + 18);
-      var ly = pos.y + ny * (nodeD / 2 + 18);
-      lx = Math.max(26, Math.min(W - 26, lx));
-      ly = Math.max(14, Math.min(H - 14, ly));
-      lb.style.left = lx + 'px';
-      lb.style.top = ly + 'px';
-      layer.appendChild(lb);
-    }
-  }
-
-  if (!itemsOfDay().length) {
-    var vk = viewKey(), tk = todayKey();
-    layer.appendChild(el('div', 'hint loop-hint',
       vk === tk ? '今天还空着 · 点任意时段加第一件事'
         : vk < tk ? '这天没有记录 · 过去的日子只做留档'
         : '这天还空着 · 可以先排几件事'));

@@ -2310,7 +2310,7 @@ iOS 侧滑返回是系统级手势，WebKit 自带页面转场（当前页跟手
 
 ---
 
-## P3.50 · 轨道风格重排：删大弧 + 矩形/圆形闭环 ✅ 2026-11-21
+## P3.50 · 轨道风格重排：删大弧 + 矩形/圆形闭环 ✅ 2026-11-21（闭环部分已由 P3.50.1 撤回）
 
 ### 需求（用户原话）
 
@@ -2344,4 +2344,34 @@ iOS 侧滑返回是系统级手势，WebKit 自带页面转场（当前页跟手
 - **截图误判**：headless 直接 `--window-size=390,844` 打开 index.html 截图，环看起来是椭圆且左右被裁。实测（390×844 iframe）`iw=390 / wrapW=375 / trackW=375 / n0=188,186`，几何完全正确——差异来自截图环境的视口宽度不是 390（`W` 取到 480，被 390 的截图宽度切掉）。以后验收几何一律在 390×844 iframe 里量。
 - `#wrap` 有 `scrollbar-gutter: stable`，`clientWidth` 是 375 而不是 390，闭环半径按 375 算，这是对的。
 - 圆环左右极值处（3 点 / 9 点方向）标签往外推会探出容器（`18:00` 左边被裁 3px），所以加了 x/y 夹取。
+
+---
+
+## P3.50.1 · 撤回矩形 / 圆形闭环，回到三种风格 ✅ 2026-11-21
+
+### 需求（用户原话）
+
+> 圆形、矩形太丑了，去掉，还是只保留三种吧：蛇形、直线、折线。版本号改为 3.50.1
+
+### 改法
+
+| 项 | 改法 |
+|---|---|
+| app.js | `SHAPES` 删掉 `rect` / `circle`，`snapStyle` 简化成 `SHAPES[v] ? v : 'wave'`（旧存档 arc / rect / circle 全部回落蛇形）；`shapeUnit` 去掉 loop 守卫 |
+| app.js | 整块删除闭环实现（`LOOP_PAD` / `loopCirclePts` / `loopRectPts` / `loopGeom` / `renderLoop`），`render()` 回到 `renderV()` / `renderH()` 二选一 |
+| index.html | 风格选项回到 3 个（`.seg wide`，不再用 `.seg.five`）；三处版本串升 `?v=p3.50.1` + 注记 `版本 P3.50.1` |
+| styles.css | 删 `.tlabel.loop`、`.hint.loop-hint`、`.seg.five button` |
+| sw.js | CACHE `timerail-p3.50.1`、ASSETS 三条 `?v=p3.50.1`、头注释 P3.50.1 |
+
+### 验收
+
+- ✅ 语法/运行：`index.html?now=570` 正常渲染 24 个节点、无 JS 报错
+- ✅ 带示例数据（`demo=1`）10 个事项短条正常，轨道高 2224（蛇形纵向长轨道）
+- ✅ 旧值回落：`?style=circle` / `?style=rect` 不再生效，仍按蛇形渲染
+- ✅ 设置页只剩 3 个风格按钮，无矩形 / 圆形；页脚版本显示 P3.50.1
+
+### 坑
+
+- 撤功能时别只删按钮：`SHAPES` 里的 `loop` 标记、`shapeUnit` 的 loop 守卫、`render()` 的闭环分支要一起清，否则残留死代码；旧存档值靠 `snapStyle` 兜底即可，不用写迁移。
+
 
