@@ -108,6 +108,9 @@
  *           批量选择删除（去掉类型行与输入框），速记统一从记录页底部输入
  *   - P3.48.1：修「自定义」类型弹窗被记录页盖住——.modal 层级 60 → 95（记录页 70），
  *           删掉只在 sheet-over-diary 下抬到 90 的旧补丁
+ *   - P3.49：全部记录改为「点卡片进单日阅读页」——列表不再原地展开，点任意一天（含
+ *           搜索结果）进入整页阅读，长文与速记完整展示，搜索命中词继续标黄；返回按钮
+ *           或系统返回都回到原列表，搜索词与滚动位置保留（列表不重渲染）
  */
 (function () {
 'use strict';
@@ -1103,13 +1106,14 @@ function backOne() {
     var cb = chooserBack; chooserBack = null; restoreSheet(cb); navPush(); return true;
   }
   if (activeSheet) { hideSheet(); return true; }
+  if (dayOpen) { closeDay(); return true; }   // P3.49：单日阅读页在全部记录之上，先关它
   if (allOpen) { closeAll(); return true; }
   if (diaryOpen) { closeDiary(); return true; }
   return false;
 }
 /* 有没有任何界面开着（补压排队新层前先确认，防「关→瞬开→瞬关」三元竞态留鬼） */
 function anyLayerOpen() {
-  return !logTypeModal.hidden || !calEl.hidden || !onboardEl.hidden || !!activeSheet || allOpen || diaryOpen;
+  return !logTypeModal.hidden || !calEl.hidden || !onboardEl.hidden || !!activeSheet || dayOpen || allOpen || diaryOpen;
 }
 window.addEventListener('popstate', function () {
   if (navDropPending > 0) {
@@ -2100,6 +2104,14 @@ var allQ = document.getElementById('all-q');
 var allQClear = document.getElementById('all-q-clear');
 var allOpen = false;
 
+/* 单日阅读页（P3.49）：从列表点任意一天进入，完整阅读当天长文与速记 */
+var dayPage = document.getElementById('day-page');
+var dayTitle = document.getElementById('day-title');
+var daySub = document.getElementById('day-sub');
+var dayBody = document.getElementById('day-body');
+var dayOpen = false;
+var dayKey = null;
+
 function allDays() {
   var seen = {};
   Object.keys(data.diary).forEach(function (k) { seen[k] = 1; });
@@ -2176,46 +2188,9 @@ function renderAll() {
     });
     head.appendChild(ex);
     card.appendChild(head);
-
-    var body = el('div', 'all-card-body');
-    /* 搜索命中即展开：搜索结果就是要看内容 */
-    body.hidden = !q;
-    tg.setAttribute('aria-expanded', q ? 'true' : 'false');
-    if (q) card.classList.add('open');
-    tg.addEventListener('click', function () {
-      var show = body.hidden;
-      body.hidden = !show;
-      card.classList.toggle('open', show);
-      tg.setAttribute('aria-expanded', show ? 'true' : 'false');
-      haptic();
-    });
-
-    if (hasText) {
-      body.appendChild(el('div', 'all-sec', '【记录】'));
-      var tEl = el('div', 'all-text');
-      appendHl(tEl, rec.text, q);
-      body.appendChild(tEl);
-    }
-    if (logs.length) {
-      body.appendChild(el('div', 'all-sec', '【速记】'));
-      var ul = el('ul', 'all-logs');
-      logs.forEach(function (lg) {
-        var metaLg = logMeta(lg.type, lg);
-        var li = el('li', 'row log-row');
-        li.appendChild(el('span', 'log-badge ' + metaLg.cls, metaLg.label));
-        var b = el('div', 'log-body');
-        var tx = el('div', 'log-text');
-        appendHl(tx, lg.text, q);
-        b.appendChild(tx);
-        var t = new Date(lg.createdAt);
-        var clock = isNaN(t.getTime()) ? '' : pad(t.getHours()) + ':' + pad(t.getMinutes());
-        b.appendChild(el('div', 'log-time', clock ? clock + ' 记录' : '记录'));
-        li.appendChild(b);
-        ul.appendChild(li);
-      });
-      body.appendChild(ul);
-    }
-    card.appendChild(body);
+    /* P3.49：点卡片进入单日阅读页（不再原地展开），返回后列表与搜索词原样保留 */
+    tg.setAttribute('aria-label', '阅读 ' + ymd(d) + ' 的记录');
+    tg.addEventListener('click', function () { openDay(k); });
     allBody.appendChild(card);
   });
 }
@@ -2232,12 +2207,90 @@ function openAll() {
 }
 
 function closeAll() {
+  /* 单日阅读页在列表之上；理论上不会同时要关两层，这里兜底直接收掉，不再动 history */
+  if (dayOpen) {
+    dayPage.classList.remove('open');
+    dayPage.setAttribute('aria-hidden', 'true');
+    dayOpen = false;
+    dayKey = null;
+  }
   var had = allOpen;
   allPage.classList.remove('open');
   allPage.setAttribute('aria-hidden', 'true');
   allOpen = false;
   if (had) navDrop();
 }
+
+/* 单日阅读页（P3.49）：把当天长文与速记完整渲染出来；
+ * 如果是从搜索结果点进来的，命中词继续标黄，直接看到对应文本 */
+function renderDay(k, q) {
+  var d = parseKey(k);
+  var rec = data.diary[k];
+  var logs = data.logs[k] || [];
+  var hasText = !!(rec && rec.text && rec.text.trim());
+  var week = d ? ['周日', '周一', '周二', '周三', '周四', '周五', '周六'][d.getDay()] : '';
+  var bits = [];
+  if (hasText) bits.push('约 ' + rec.text.trim().length + ' 字');
+  if (logs.length) bits.push(logs.length + ' 条速记');
+  dayTitle.textContent = d ? ymd(d) + ' ' + week : k;
+  daySub.textContent = bits.join(' · ');
+  dayBody.innerHTML = '';
+  if (hasText) {
+    dayBody.appendChild(el('div', 'all-sec', '【记录】'));
+    var tEl = el('div', 'all-text');
+    appendHl(tEl, rec.text, q);
+    dayBody.appendChild(tEl);
+  }
+  if (logs.length) {
+    dayBody.appendChild(el('div', 'all-sec', '【速记】'));
+    var ul = el('ul', 'all-logs');
+    logs.forEach(function (lg) {
+      var metaLg = logMeta(lg.type, lg);
+      var li = el('li', 'row log-row');
+      li.appendChild(el('span', 'log-badge ' + metaLg.cls, metaLg.label));
+      var b = el('div', 'log-body');
+      var tx = el('div', 'log-text');
+      appendHl(tx, lg.text, q);
+      b.appendChild(tx);
+      var t = new Date(lg.createdAt);
+      var clock = isNaN(t.getTime()) ? '' : pad(t.getHours()) + ':' + pad(t.getMinutes());
+      b.appendChild(el('div', 'log-time', clock ? clock + ' 记录' : '记录'));
+      li.appendChild(b);
+      ul.appendChild(li);
+    });
+    dayBody.appendChild(ul);
+  }
+  if (!hasText && !logs.length) dayBody.appendChild(el('div', 'all-empty', '这天还没有记录'));
+  dayBody.scrollTop = 0;
+}
+
+function openDay(k) {
+  if (dayOpen) return;
+  dayKey = k;
+  renderDay(k, (allQ.value || '').trim().toLowerCase());
+  dayPage.classList.add('open');
+  dayPage.setAttribute('aria-hidden', 'false');
+  dayOpen = true;
+  navPush();
+  haptic();
+}
+
+function closeDay() {
+  var had = dayOpen;
+  dayPage.classList.remove('open');
+  dayPage.setAttribute('aria-hidden', 'true');
+  dayOpen = false;
+  dayKey = null;
+  if (had) navDrop();
+}
+
+document.getElementById('day-close').addEventListener('click', closeDay);
+document.getElementById('day-export').addEventListener('click', function () {
+  if (!dayKey) return;
+  downloadText('微记-' + dayKey + '.txt', dayText(dayKey));
+  toast('已导出 ' + dayKey + ' 的文本');
+  haptic();
+});
 
 document.getElementById('diary-all').addEventListener('click', openAll);
 document.getElementById('all-close').addEventListener('click', closeAll);

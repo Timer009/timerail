@@ -1113,11 +1113,49 @@ body.sheet-over-diary #backdrop { z-index: 75; }
   height: 6px;
   border-right: 1.6px solid currentColor;
   border-bottom: 1.6px solid currentColor;
-  transform: rotate(-45deg);
-  transition: transform .18s;
+  transform: rotate(-45deg);   /* P3.49：指向右侧 = 进入阅读，不再表示展开 */
 }
-.all-card.open .all-caret::before { transform: rotate(45deg); }
-.all-card-body[hidden] { display: none; }
+
+/* ===== 单日阅读页（P3.49）===== */
+/* 盖在全部记录页（85）之上，仍是整页从右滑入；返回时下面的列表原样保留 */
+.day-page {
+  position: fixed;
+  inset: 0;
+  z-index: 86;
+  display: flex;
+  flex-direction: column;
+  background: var(--bg);
+  transform: translateX(100%);
+  visibility: hidden;
+  transition: transform .26s cubic-bezier(.22,.61,.36,1), visibility .26s;
+}
+.day-page.open { transform: translateX(0); visibility: visible; }
+.day-top {
+  position: relative;
+  flex: none;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: calc(64px + env(safe-area-inset-top)) 8px 8px;
+  background: var(--bg);
+  border-bottom: 1px solid var(--line-soft);
+}
+.day-head { flex: 1; min-width: 0; padding: 0 2px; }
+.day-title { font-size: 16px; font-weight: 600; line-height: 22px; }
+.day-sub { font-size: 12px; line-height: 18px; color: var(--muted); margin-top: 2px; }
+#day-close svg { width: 30px; height: 30px; }
+.day-body {
+  flex: 1;
+  min-height: 0;
+  width: 100%;
+  max-width: 480px;
+  margin: 0 auto;
+  padding: 16px 16px calc(20px + env(safe-area-inset-bottom));
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  -webkit-overflow-scrolling: touch;
+}
+.day-body .all-text { font-size: 15px; line-height: 1.72; }
 /* 命中高亮：半透明黄底，深浅主题都可读 */
 .all-hl { background: rgba(255, 214, 102, .35); color: inherit; border-radius: 3px; padding: 0 1px; }
 .all-card-date { font-size: 14px; font-weight: 600; color: var(--text); }

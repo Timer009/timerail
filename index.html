@@ -27,10 +27,10 @@
   if (m) m.setAttribute('content', light ? '#f5f8fc' : '#0e131f');
 })();
 </script>
-<link rel="manifest" href="manifest.webmanifest?v=p3.48.1">
+<link rel="manifest" href="manifest.webmanifest?v=p3.49">
 <link rel="icon" type="image/png" sizes="192x192" href="icon-192.png">
 <link rel="apple-touch-icon" href="apple-touch-icon.png">
-<link rel="stylesheet" href="styles.css?v=p3.48.1">
+<link rel="stylesheet" href="styles.css?v=p3.49">
 </head>
 <body>
 
@@ -186,7 +186,7 @@
     </div>
     <button type="button" class="ghost mini" id="all-export">导出全部</button>
   </div>
-  <!-- 搜索（P3.47）：天级过滤，命中即展开当日卡片并标黄；输入法组合期间不触发过滤 -->
+  <!-- 搜索（P3.47）：天级过滤；P3.49 起点卡片进入单日阅读页，命中词在阅读页里标黄 -->
   <div class="all-search">
     <div class="all-search-box">
       <svg class="all-search-ic" viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="6.5"/><path d="M16 16l5 5"/></svg>
@@ -197,6 +197,22 @@
     </div>
   </div>
   <div class="all-body" id="all-body"></div>
+</section>
+
+<!-- 单日阅读页（P3.49）：从全部记录点任意一天进入，完整展示当天长文与速记；
+     返回时回到原列表（搜索词与滚动位置都保留） -->
+<section class="day-page" id="day-page" aria-hidden="true">
+  <div class="day-top">
+    <button class="icon" id="day-close" aria-label="返回记录列表">
+      <svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 4.5L8 12l7 7.5"/></svg>
+    </button>
+    <div class="day-head">
+      <div class="day-title" id="day-title">—</div>
+      <div class="day-sub" id="day-sub">—</div>
+    </div>
+    <button type="button" class="ghost mini" id="day-export">导出这天</button>
+  </div>
+  <div class="day-body" id="day-body"></div>
 </section>
 
 <div id="backdrop"></div>
@@ -364,7 +380,7 @@
       <button type="button" class="ghost danger" id="reset">清空全部数据</button>
     </div>
 
-    <div class="note">数据仅保存在本机浏览器中 · 版本 P3.48.1 (2026-11-20)</div>
+    <div class="note">数据仅保存在本机浏览器中 · 版本 P3.49 (2026-11-21)</div>
   </div>
 </section>
 
@@ -386,6 +402,6 @@
 </div>
 
 <div id="toast"></div>
-<script src="app.js?v=p3.48.1"></script>
+<script src="app.js?v=p3.49"></script>
 </body>
 </html>
