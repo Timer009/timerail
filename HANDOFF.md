@@ -201,3 +201,7 @@ timerail/
 - 跨时段可见性：竖向由 `.spanbar` 沿轨道采样绘制（只画 `duration > granularity` 的事项）；段线配色与完成比例用 `itemsCovering(i)`，不要退回 `itemBlock` 只看起点。
 - `backOne()` 里 `whenSheet` 必须排在通用 `activeSheet` 之前：先退回详情面板，避免系统返回把两层一起关。
 - 版本串三处同步：`index.html` 的 `?v=` ×3 + 设置页注记、`sw.js` 的 `CACHE` 与 `ASSETS`。
+
+### P3.51.1 补充
+
+- 改时段的入口必须保持「双通道」：行内 `.when-chip`（虚线下划线 + ›）与「⋯」菜单「改时段 / 自定义时长」。只留其中任何一个都会被认为找不到。

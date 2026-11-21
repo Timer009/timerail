@@ -131,6 +131,8 @@
  *           标签五选一（未开始 / 进行中 / 已完成 / 未完成 / 已取消）；
  *           时段可自定义：行内时段标签打开面板，开始 + 结束按 15 分钟一步，
  *           结束早于开始按次日算；跨时段事项在竖向画贯穿胶囊条
+ *   - P3.51.1：自定义时段入口补两处显眼位置——时段标签加虚线下划线 + 尾部「›」，
+ *           「⋯」菜单新增「改时段 / 自定义时长」，详情副标题改为「点时间改时段」
  */
 (function () {
 'use strict';
@@ -1279,7 +1281,7 @@ function renderSheet() {
   document.getElementById('sheet-title').textContent =
     fmt(s) + ' – ' + fmt(e) + (e <= s ? ' 次日' : '');
   document.getElementById('sheet-sub').textContent =
-    list.length ? list.length + ' 项 · 点状态改状态 · 点名称改名' : '这个时段还空着';
+    list.length ? list.length + ' 项 · 点状态改状态 · 点时间改时段' : '这个时段还空着';
 
   var ul = document.getElementById('sheet-list');
   ul.innerHTML = '';
@@ -1306,7 +1308,7 @@ function renderSheet() {
     var scope = fmt(it.start) + '–' + fmt(endMin) + (it.start + it.duration > 1440 ? ' 次日' : '');
     var when = el('button', 'when-chip', scope + ' · ' + durText(it.duration));
     when.type = 'button';
-    when.setAttribute('aria-label', '时段 ' + scope + '，点按修改');
+    when.setAttribute('aria-label', '时段 ' + scope + '，点按改时段');
     when.addEventListener('click', function () { openWhen(it); });
 
     body.appendChild(t);
@@ -1522,10 +1524,12 @@ function itemMenu(it) {
     { v: 'doing', t: '标记为进行中', hint: hint('doing') },
     { v: 'missed', t: '标记为未完成', hint: hint('missed') },
     { v: 'cancel', t: '取消此事', hint: hint('cancel') },
+    { v: 'when', t: '改时段 / 自定义时长' },
     { v: 'pool', t: '放入顺延池', hint: inPool ? '已在池中' : '' },
     { v: 'move', t: '移动到其他时段' },
     { v: 'del', t: '删除', danger: true }
   ], function (v) {
+    if (v === 'when') { openWhen(it); return; }
     if (v === 'move') { pickBlock(it); return; }
     if (v === 'pool') { putIntoPool(it); return; }
     if (v === 'del') {

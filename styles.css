@@ -787,12 +787,15 @@ body.horiz .hint {
 .when-chip {
   display: inline-block;
   margin-top: 5px;
-  padding: 2px 0;
-  color: var(--muted);
+  padding: 2px 0 3px;
+  color: var(--text-2);
   font-size: 11px;
   font-variant-numeric: tabular-nums;
+  /* P3.51.1：虚线下划线 + 尾部「›」，明确它是可点的时段入口 */
+  border-bottom: 1px dashed var(--line);
 }
-.when-chip:active { color: var(--text-2); }
+.when-chip::after { content: ' ›'; color: var(--muted); }
+.when-chip:active { color: var(--text); border-bottom-color: var(--text-2); }
 
 /* 跨时段事项的贯穿胶囊条（P3.51） */
 .spanbar {
