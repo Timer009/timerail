@@ -429,6 +429,8 @@ input { font: inherit; color: inherit; }
 }
 .tlabel.hour { color: var(--text-2); font-weight: 600; font-size: 12px; }
 .tlabel.second { color: var(--muted-2); }
+/* 闭环轨道的时间标签（P3.50）：以节点为锚、往外推，需要双向居中 */
+.tlabel.loop { transform: translate(-50%, -50%); text-align: center; }
 
 /* 时段表情：排在时间前面，用系统 emoji 字体 */
 .tlabel .mood {
@@ -536,6 +538,15 @@ input { font: inherit; color: inherit; }
   font-size: 12px;
   text-align: center;
   pointer-events: none;
+}
+/* 闭环轨道里的空态提示（P3.50）：居中放在环内，不再吸顶 */
+.hint.loop-hint {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  margin: 0;
+  max-width: 240px;
 }
 
 /* ===== 横向模式 ===== */
@@ -673,7 +684,7 @@ body.horiz .hint {
 .seg button.active { background: var(--seg-active); color: var(--text); font-weight: 600; }
 .seg.wide { flex: 1; }
 .seg.wide button { flex: 1; text-align: center; }
-.seg.four button { padding: 6px 2px; }   /* 四个风格选项挤在 390px 里 */
+.seg.five button { padding: 6px 2px; }   /* 五个风格选项挤在 390px 里 */
 .ghost {
   padding: 7px 12px;
   border-radius: 9px;
