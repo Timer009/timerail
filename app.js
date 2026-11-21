@@ -116,6 +116,9 @@
  *           三种；旧存档里的 rect / circle 与 arc 一样折回蛇形
  *   - P3.50.2：自定义小记类型被选中时，标签右上角露出铅笔角标，点它即可改名/换图标
  *           （原先入口藏在「再点一次」，没人知道还能改）；修改弹窗提示只影响之后记的条目
+ *   - P3.50.3：小记类型六色身份色——灵光一闪琥珀、温故知新蓝、闪光时刻紫、
+ *           日拱一卒绿、正中靶心玫瑰红、今日拼图青；自定义颜色跟着入库时定格的
+ *           表情走，历史条目不随改名变色；标签未选中仍为灰
  */
 (function () {
 'use strict';
@@ -1529,17 +1532,31 @@ var logTypeEmojis = document.getElementById('logtype-emojis');
 var logTypeEditing = false;
 var logTypeEmoji = '✨';
 
+/* P3.50.3：小记类型的身份色。主类型按语义配色，自定义跟着入库时定格的
+ * 表情走（历史条目不随改名变色）；CSS 只认 data-tone，色值集中在 :root。 */
+var TONE_OF_EMOJI = { '✨': 'violet', '🌱': 'green', '🎯': 'rose', '🧩': 'teal' };
+function toneOf(t, em) {
+  if (t === 'review') return 'blue';
+  if (t === 'highlight') return 'amber';
+  return TONE_OF_EMOJI[em] || 'amber';
+}
+
 function logMeta(t, lg) {
   if (t === 'custom') {
     var c = data.settings.logCustom || { name: '闪光时刻', emoji: '✨' };
     // 优先用条目里定格的图标/名字；P3.9 之前记的没有快照，退回当前配置
     var em = (lg && lg.emoji) || c.emoji;
     var lb = (lg && lg.label) || c.name;
-    return { cls: 'custom', label: em + ' ' + lb };
+    return { tone: toneOf('custom', em), label: em + ' ' + lb };
   }
   return t === 'review'
-    ? { cls: 'review', label: '📝 温故知新' }
-    : { cls: 'highlight', label: '💡 灵光一闪' };
+    ? { tone: 'blue', label: '📝 温故知新' }
+    : { tone: 'amber', label: '💡 灵光一闪' };
+}
+function logBadge(meta) {
+  var s = el('span', 'log-badge', meta.label);
+  s.dataset.tone = meta.tone;
+  return s;
 }
 function logCount(key) { var a = data.logs[key]; return a ? a.length : 0; }
 
@@ -1550,6 +1567,9 @@ function renderLogTabs() {
     b.type = 'button';
     b.dataset.type = t;
     b.textContent = label;
+    /* P3.50.3：每种小记类型一个身份色，未选中时仍是灰的 */
+    if (t === 'custom') b.dataset.tone = toneOf('custom', data.settings.logCustom ? data.settings.logCustom.emoji : '✨');
+    else if (t === 'review' || t === 'highlight') b.dataset.tone = toneOf(t);
     if (t === logType) {
       b.className = 'active';
       /* P3.50.2：自定义标签选中后右上角露出铅笔角标，提示「点它可改名换图标」 */
@@ -1631,7 +1651,7 @@ function renderLog() {
       if (logSelIds[lg.id]) li.className += ' picked';
       li.appendChild(el('span', 'sel-check', '✓'));
     }
-    li.appendChild(el('span', 'log-badge ' + meta.cls, meta.label));
+    li.appendChild(logBadge(meta));
     var body = el('div', 'log-body');
     body.appendChild(el('div', 'log-text', lg.text));
     var t = new Date(lg.createdAt);
@@ -1833,7 +1853,7 @@ function renderDiaryLogs() {
   list.forEach(function (lg) {
     var meta = logMeta(lg.type, lg);
     var li = el('li', 'row log-row');
-    li.appendChild(el('span', 'log-badge ' + meta.cls, meta.label));
+    li.appendChild(logBadge(meta));
     var body = el('div', 'log-body');
     body.appendChild(el('div', 'log-text', lg.text));
     var t = new Date(lg.createdAt);
@@ -2265,7 +2285,7 @@ function renderDay(k, q) {
     logs.forEach(function (lg) {
       var metaLg = logMeta(lg.type, lg);
       var li = el('li', 'row log-row');
-      li.appendChild(el('span', 'log-badge ' + metaLg.cls, metaLg.label));
+      li.appendChild(logBadge(metaLg));
       var b = el('div', 'log-body');
       var tx = el('div', 'log-text');
       appendHl(tx, lg.text, q);

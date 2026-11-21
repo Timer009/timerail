@@ -2404,5 +2404,53 @@ iOS 侧滑返回是系统级手势，WebKit 自带页面转场（当前页跟手
 - 角标用 `::before`/`::after` 负偏移挂在描边外，会让按钮的 `scrollWidth` 比 `clientWidth` 大几像素——这是角标溢出，不是文案截断；判断文字有没有被切要看换行与 `text-overflow`，别被这个数值骗了。
 - 铅笔一开始用描边 SVG，9px 下糊成一根斜杠；改实心路径（Material edit 图标）后小尺寸才认得出。mask 尺寸也从 10px 收到 9px，避免笔尖贴到圆底边缘。
 
+---
+
+## P3.50.3 · 小记类型六色身份色 ✅ 2026-11-21
+
+### 需求（用户原话）
+
+> 速记里边的小标签。灵光一闪和温故知新。都是暗绿色的。切到其他的时候 比如今日拼图。或者闪光时刻。都是淡黄色的。这个能不能每一种标签一个颜色？
+
+### 现状诊断
+
+- 选中色只有三套：highlight → blue、review → green、custom 全部 → amber。深色底上蓝绿都很暗，容易看成同一种暗色；自定义四种表情共用一个黄。
+- 徽标 `.log-badge` 与标签共用 `data-type` 选择器，改色要动好几处。
+
+### 改法
+
+| 项 | 改法 |
+|---|---|
+| styles.css | `:root` 与 `[data-theme="light"]` 各加 violet / rose / teal 三组（bg / line / ink）；`[data-tone="…"]` 统一映射到 `--tone-bg / --tone-line / --tone-ink` |
+| styles.css | 标签选中态改 `.log-tabs button.active[data-tone]`，徽标改 `.log-badge[data-tone]`，两者共用同一份映射；未选中的标签仍用灰色 |
+| app.js | 新增 `TONE_OF_EMOJI`（✨violet / 🌱green / 🎯rose / 🧩teal）与 `toneOf(type, emoji)`：highlight→amber、review→blue、custom 按表情取色，未知回落 amber |
+| app.js | `renderLogTabs` 给每个标签写 `data-tone`；`logMeta` 改为返回 `tone`；新增 `logBadge(meta)` 统一生成徽标并写 `data-tone`（三处调用点替换） |
+| 版本 | p3.50.3（index 三处 + 页脚注记 + sw CACHE/ASSETS） |
+
+### 六色表
+
+| 标签 | tone | 深色 ink | 浅色 ink |
+|---|---|---|---|
+| 💡 灵光一闪 | amber | #f2d79a | #75560d |
+| 📝 温故知新 | blue | #cfe0ff | #1d4f9e |
+| ✨ 闪光时刻 | violet | #d3c4ff | #5b3fa8 |
+| 🌱 日拱一卒 | green | #c9efd8 | #146b3b |
+| 🎯 正中靶心 | rose | #ffc4cf | #9c3550 |
+| 🧩 今日拼图 | teal | #b9edf2 | #17646d |
+
+### 验收（390×844 iframe，深浅两套各跑一遍）
+
+- ✅ 标签行：三个标签同 top=487、宽 96、单行；未选中为灰（无背景），选中才上色
+- ✅ 选中切换：灵光一闪 = amber、温故知新 = blue、自定义按当前表情（🎯 → rose / ✨ → violet）
+- ✅ 列表六个徽标：amber / blue / violet / green / rose / teal，背景、描边、文字三色配套，互不相同
+- ✅ 历史条目按入库定格的 emoji 上色（同一账户里 4 种自定义各显其色），改名不影响旧记录
+- ✅ 浅色主题对比度正常，无发灰、无串色；截图与 DOM 计算色一致
+
+### 坑
+
+- 选色不能直接写 `background: var(--violet-bg)` 到某个 `data-type` 上：标签和徽标是两套 DOM，最后统一收敛到 `data-tone` + `--tone-*`，只维护一份映射。
+- 自定义颜色必须跟**入库时的 emoji**，不能跟当前设置里的 emoji，否则改类型会让历史列表整片变色。
+
+
 
 

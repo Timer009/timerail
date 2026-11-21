@@ -69,6 +69,16 @@
   --amber-bg: rgba(240,180,60,.14);
   --amber-line: #6b5a2f;
   --amber-ink: #f2d79a;
+  /* P3.50.3 小记类型身份色：紫（闪光时刻）/ 玫瑰红（正中靶心）/ 青（今日拼图） */
+  --violet-bg: rgba(150,110,255,.14);
+  --violet-line: #5a4780;
+  --violet-ink: #d3c4ff;
+  --rose-bg: rgba(240,110,130,.13);
+  --rose-line: #6e3a48;
+  --rose-ink: #ffc4cf;
+  --teal-bg: rgba(60,190,200,.13);
+  --teal-line: #2e6168;
+  --teal-ink: #b9edf2;
   --amber-badge-bg: #2a2119;
   --amber-badge-line: #5a4225;
   --amber-badge-ink: #f0a35e;
@@ -141,6 +151,15 @@
   --amber-bg: #fdf4dc;
   --amber-line: #ddc189;
   --amber-ink: #75560d;
+  --violet-bg: #f1ecff;
+  --violet-line: #cfc0f0;
+  --violet-ink: #5b3fa8;
+  --rose-bg: #ffedf0;
+  --rose-line: #f0c2cb;
+  --rose-ink: #9c3550;
+  --teal-bg: #e6f7f9;
+  --teal-line: #b3dfe4;
+  --teal-ink: #17646d;
   --amber-badge-bg: #fff4df;
   --amber-badge-line: #e3c18e;
   --amber-badge-ink: #8a5414;
@@ -819,8 +838,15 @@ body.horiz .hint {
   font-size: 12px;
   color: var(--muted);
 }
-.log-tabs button.active[data-type="highlight"] { border-color: var(--blue-line); background: var(--blue-bg); color: var(--blue-ink); }
-.log-tabs button.active[data-type="review"] { border-color: var(--green-line); background: var(--green-bg); color: var(--green-ink); }
+/* P3.50.3：小记类型身份色 —— 标签与徽标共用一份 data-tone 映射，
+ * 具体色值仍留在 :root，深浅主题各一套。未选中的标签不取色，保持灰色。 */
+[data-tone="amber"]  { --tone-bg: var(--amber-bg);  --tone-line: var(--amber-line);  --tone-ink: var(--amber-ink); }
+[data-tone="blue"]   { --tone-bg: var(--blue-bg);   --tone-line: var(--blue-line);   --tone-ink: var(--blue-ink); }
+[data-tone="green"]  { --tone-bg: var(--green-bg);  --tone-line: var(--green-line);  --tone-ink: var(--green-ink); }
+[data-tone="violet"] { --tone-bg: var(--violet-bg); --tone-line: var(--violet-line); --tone-ink: var(--violet-ink); }
+[data-tone="rose"]   { --tone-bg: var(--rose-bg);   --tone-line: var(--rose-line);   --tone-ink: var(--rose-ink); }
+[data-tone="teal"]   { --tone-bg: var(--teal-bg);   --tone-line: var(--teal-line);   --tone-ink: var(--teal-ink); }
+.log-tabs button.active[data-tone] { border-color: var(--tone-line); background: var(--tone-bg); color: var(--tone-ink); }
 .log-row { align-items: flex-start; gap: 8px; }
 .log-badge {
   flex: none;
@@ -830,10 +856,7 @@ body.horiz .hint {
   border: 1px solid;
   font-size: 11px;
 }
-.log-badge.highlight { color: var(--blue-ink); border-color: var(--blue-line); background: var(--blue-bg); }
-.log-badge.review { color: var(--green-ink); border-color: var(--green-line); background: var(--green-bg); }
-.log-badge.custom { color: var(--amber-ink); border-color: var(--amber-line); background: var(--amber-bg); }
-.log-tabs button.active[data-type="custom"] { border-color: var(--amber-line); background: var(--amber-bg); color: var(--amber-ink); }
+.log-badge[data-tone] { color: var(--tone-ink); border-color: var(--tone-line); background: var(--tone-bg); }
 .log-tabs button[data-type="custom-new"] { color: var(--now-ink); border-style: dashed; }
 /* 自定义类型被选中时（P3.50.2）：右上角挂一枚小铅笔角标，
  * 告诉用户「这个标签还能再改名 / 换图标」，点它就是打开修改弹窗。
