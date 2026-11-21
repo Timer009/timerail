@@ -5,13 +5,13 @@
  *   - 其它同源静态资源：缓存优先 + 后台顺手更新
  * 说明：Service Worker 只在 https 或 localhost 下生效；用局域网 IP 访问时自动跳过，应用照常可用。
  */
-var CACHE = 'timerail-p3.51.1';
+var CACHE = 'timerail-p3.51.2';
 var ASSETS = [
   './',
   './index.html',
-  './styles.css?v=p3.51.1',
-  './app.js?v=p3.51.1',
-  './manifest.webmanifest?v=p3.51.1',
+  './styles.css?v=p3.51.2',
+  './app.js?v=p3.51.2',
+  './manifest.webmanifest?v=p3.51.2',
   './icon-192.png',
   './icon-512.png',
   './icon-maskable-512.png',

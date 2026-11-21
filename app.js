@@ -133,6 +133,9 @@
  *           结束早于开始按次日算；跨时段事项在竖向画贯穿胶囊条
  *   - P3.51.1：自定义时段入口补两处显眼位置——时段标签加虚线下划线 + 尾部「›」，
  *           「⋯」菜单新增「改时段 / 自定义时长」，详情副标题改为「点时间改时段」
+ *   - P3.51.2：修返回——状态标签 / 「⋯」/ 顺延池的选择器打开后，系统返回先切回原
+ *           面板（choose 增加 backSheet），不再直接掉回主页；行内时段改成带边框
+ *           的按钮，右侧明写「改时段」
  */
 (function () {
 'use strict';
@@ -1306,7 +1309,10 @@ function renderSheet() {
 
     var endMin = (it.start + it.duration) % 1440;
     var scope = fmt(it.start) + '–' + fmt(endMin) + (it.start + it.duration > 1440 ? ' 次日' : '');
-    var when = el('button', 'when-chip', scope + ' · ' + durText(it.duration));
+    /* P3.51.2：时段做成带边框的按钮，右边明写「改时段」——只靠虚线看不懂能点 */
+    var when = el('button', 'when-chip');
+    when.appendChild(el('span', 'when-time', scope + ' · ' + durText(it.duration)));
+    when.appendChild(el('span', 'when-edit', '改时段'));
     when.type = 'button';
     when.setAttribute('aria-label', '时段 ' + scope + '，点按改时段');
     when.addEventListener('click', function () { openWhen(it); });
@@ -1353,7 +1359,7 @@ function statusMenu(it) {
     renderSheet();
     render();
     showSheet(sheet);
-  });
+  }, sheet);
 }
 
 var whenItem = null;
@@ -1453,10 +1459,11 @@ function startRename(it, titleEl) {
   });
 }
 
-/* 通用选择器 */
+/* 通用选择器
+ * backSheet：从哪个面板打开就传哪个面板。系统返回先切回它，而不是直接退回主页面（P3.51.2） */
 var chooserCb = null;
-function choose(title, opts, cb) {
-  chooserBack = null;   // 普通选择器不是确认框，返回时整层关闭
+function choose(title, opts, cb, backSheet) {
+  chooserBack = backSheet || null;
   document.getElementById('chooser-title').textContent = title;
   document.getElementById('chooser-msg').hidden = true;   // 选择器与确认框共用一个面板
   var ul = document.getElementById('chooser-list');
@@ -1556,7 +1563,7 @@ function itemMenu(it) {
     render();
     showSheet(sheet);
     haptic();
-  });
+  }, sheet);
 }
 
 function pickBlock(it) {
@@ -1578,7 +1585,7 @@ function pickBlock(it) {
     render();
     showSheet(sheet);
     haptic();
-  });
+  }, sheet);
 }
 
 /* ===== 顺延池 ===== */
@@ -1690,7 +1697,7 @@ function pickPoolDate(p) {
     showSheet(poolSheet);
     toast('暂定为 ' + whenLabel(k) + ' ' + fmt(p.slot) + '（仍是不确定）');
     haptic();
-  });
+  }, poolSheet);
 }
 
 /* 改暂定时段：列表与「放回」共用同一套时间块 */
@@ -1707,7 +1714,7 @@ function pickPoolSlot(p) {
     showSheet(poolSheet);
     toast('暂定为 ' + fmt(s) + '（仍是不确定时段）');
     haptic();
-  });
+  }, poolSheet);
 }
 
 function restoreFromPool(p) {

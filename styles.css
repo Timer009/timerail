@@ -784,18 +784,28 @@ body.horiz .hint {
 .status-chip.st-done { border-color: var(--done); background: var(--green-bg); color: var(--green-ink); }
 .status-chip.st-missed { border-color: var(--missed); background: var(--orange-bg); color: var(--orange-ink); }
 .status-chip.st-canceled { border-color: var(--node-cancel-line); background: none; color: var(--cancel); }
+/* P3.51.2：不再只靠虚线——做成带边框的小按钮，右边明写「改时段」 */
 .when-chip {
-  display: inline-block;
-  margin-top: 5px;
-  padding: 2px 0 3px;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 6px;
+  padding: 4px 9px;
+  border: 1px solid var(--chip-line);
+  border-radius: 999px;
+  background: var(--chip-bg);
   color: var(--text-2);
   font-size: 11px;
   font-variant-numeric: tabular-nums;
-  /* P3.51.1：虚线下划线 + 尾部「›」，明确它是可点的时段入口 */
-  border-bottom: 1px dashed var(--line);
 }
-.when-chip::after { content: ' ›'; color: var(--muted); }
-.when-chip:active { color: var(--text); border-bottom-color: var(--text-2); }
+.when-chip .when-time { white-space: nowrap; }
+.when-chip .when-edit {
+  color: var(--blue-ink);
+  font-weight: 700;
+  white-space: nowrap;
+}
+.when-chip::after { content: '›'; color: var(--muted); margin-left: -2px; }
+.when-chip:active { background: var(--chip-active); border-color: var(--focus-line); }
 
 /* 跨时段事项的贯穿胶囊条（P3.51） */
 .spanbar {
