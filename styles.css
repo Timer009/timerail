@@ -785,10 +785,23 @@ body.horiz .hint {
 .pool-row .poolinfo { flex: 1; min-width: 0; }
 .pool-row .rowtitle { cursor: default; font-size: 14px; }
 .poolmeta { font-size: 11px; color: var(--muted); margin-top: 3px; }
+/* P3.50.6：左边一列两行——「明天」+「07:00 ?」，分别可点改日期 / 改时段 */
+.pool-when { flex: none; display: flex; flex-direction: column; gap: 3px; width: 78px; }
+.pool-date {
+  padding: 4px 6px;
+  border-radius: 8px;
+  border: 1px dashed var(--orange-line);
+  background: none;
+  color: var(--orange-ink);
+  font-size: 11px;
+  font-weight: 600;
+  white-space: nowrap;
+  opacity: .9;
+}
+.pool-date:active { background: var(--orange-bg-soft); }
 .pool-slot {
   flex: none;
-  min-width: 66px;
-  padding: 7px 8px;
+  padding: 7px 6px;
   border-radius: 10px;
   border: 1px dashed var(--orange-line);
   background: var(--orange-bg-soft);

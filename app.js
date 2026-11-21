@@ -124,6 +124,8 @@
  *   - P3.50.5：顺延池重做——入口从 11px 下划线文字升级成橙色胶囊；入池时按原事项
  *           时段记一个暂定 slot，池内以大号「07:00 ?」虚线块显示（? = 还没定），
  *           点它可改时段；「放回」直接落在暂定时段，不再二次询问
+ *   - P3.50.6：顺延池补「顺延到哪天」——入池默认原日期的第二天（今天是明天），
+ *           池内左侧两行「明天 / 07:00 ?」分别可点改日期与时段，「放回」落在该日期
  */
 (function () {
 'use strict';
@@ -259,6 +261,13 @@ function normPool(p) {
     title: title ? title.slice(0, 40) : '未命名',
     fromDate: /^\d{4}-\d{2}-\d{2}$/.test(p.fromDate) ? p.fromDate : '',
     slot: slot,
+    /* P3.50.6：池里也记「顺延到哪天」，老数据默认明天。
+     * 注意启动时 data 还没赋值，这里不能走 cfg()/todayKey()，直接用本地日期算 */
+    date: /^\d{4}-\d{2}-\d{2}$/.test(p.date) ? p.date : (function () {
+      var d = new Date();
+      d.setDate(d.getDate() + 1);
+      return ymd(d);
+    })(),
     carriedTimes: Math.max(1, Math.round(+p.carriedTimes) || 1)
   };
 }
@@ -1437,6 +1446,24 @@ function fmtDay(k) {
   return m ? (+m[2]) + '月' + (+m[3]) + '日' : '未知日期';
 }
 
+/* P3.50.6：池里的「哪天」——日期加减与显示名（今天/明天/后天/11/24 周一） */
+var WDAYS = ['周日', '周一', '周二', '周三', '周四', '周五', '周六'];
+function keyPlus(k, n) {
+  var m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(k);
+  if (!m) return k;
+  return ymd(new Date(+m[1], +m[2] - 1, +m[3] + n));
+}
+function whenLabel(k) {
+  var t = todayKey();
+  if (k === t) return '今天';
+  if (k === keyPlus(t, 1)) return '明天';
+  if (k === keyPlus(t, 2)) return '后天';
+  var m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(k);
+  if (!m) return '未知';
+  var d = new Date(+m[1], +m[2] - 1, +m[3]);
+  return (+m[2]) + '/' + (+m[3]) + ' ' + WDAYS[d.getDay()];
+}
+
 /* 池条目 id 固定为 pool_<日期>_<事项id>：同一事项重复点"放入"不会多出一条 */
 function poolIdOf(key, itemId) { return 'pool_' + key + '_' + itemId; }
 
@@ -1448,11 +1475,18 @@ function putIntoPool(it) {
     showSheet(sheet);
     return;
   }
-  data.pool.push({ id: pid, title: it.title, fromDate: key, slot: it.start, carriedTimes: 1 });
+  data.pool.push({
+    id: pid,
+    title: it.title,
+    fromDate: key,
+    slot: it.start,
+    date: keyPlus(key, 1),      // P3.50.6：默认顺延到原日期的第二天
+    carriedTimes: 1
+  });
   saveData();
   updateHeader();
   showSheet(sheet);
-  toast('已放入顺延池 · 暂按 ' + fmt(it.start) + ' 记，点时间可改');
+  toast('已放入顺延池 · 暂定 ' + whenLabel(keyPlus(key, 1)) + ' ' + fmt(it.start));
   haptic();
 }
 
@@ -1461,7 +1495,7 @@ function renderPool() {
   ul.innerHTML = '';
   var list = data.pool;
   document.getElementById('pool-sub').textContent = list.length
-    ? list.length + ' 项还没定下来 · 时间旁的「?」表示暂定，点时间可改'
+    ? list.length + ' 项还没定下来 · 点日期或时间都能改，「?」表示暂定'
     : '在事项「⋯」里可手动放入顺延池';
   if (!list.length) {
     ul.appendChild(el('li', 'empty-row', '池子空着'));
@@ -1469,12 +1503,19 @@ function renderPool() {
   }
   list.forEach(function (p) {
     var li = el('li', 'row pool-row');
-    /* P3.50.5：暂定时段做成大号可点按钮，虚线框 + 问号表示「还没定」 */
-    var when = el('button', 'pool-slot', fmt(p.slot));
-    when.type = 'button';
-    when.setAttribute('aria-label', '暂定 ' + fmt(p.slot) + '，点按可改时段');
-    when.appendChild(el('span', 'q', '?'));
-    when.addEventListener('click', function () { pickPoolSlot(p); });
+    /* P3.50.6：左侧一列两行——日期（哪天）+ 时段（几点 ?），都是暂定，各自可点改 */
+    var when = el('div', 'pool-when');
+    var dateBtn = el('button', 'pool-date', whenLabel(p.date));
+    dateBtn.type = 'button';
+    dateBtn.setAttribute('aria-label', '暂定 ' + whenLabel(p.date) + '，点按可改日期');
+    dateBtn.addEventListener('click', function () { pickPoolDate(p); });
+    var slotBtn = el('button', 'pool-slot', fmt(p.slot));
+    slotBtn.type = 'button';
+    slotBtn.setAttribute('aria-label', '暂定 ' + fmt(p.slot) + '，点按可改时段');
+    slotBtn.appendChild(el('span', 'q', '?'));
+    slotBtn.addEventListener('click', function () { pickPoolSlot(p); });
+    when.appendChild(dateBtn);
+    when.appendChild(slotBtn);
     var info = el('div', 'poolinfo');
     info.appendChild(el('div', 'rowtitle', p.title));
     info.appendChild(el('div', 'poolmeta',
@@ -1491,6 +1532,23 @@ function renderPool() {
     li.appendChild(back);
     li.appendChild(del);
     ul.appendChild(li);
+  });
+}
+
+/* 改日期：今天 / 明天 / 后天 / 未来一周 */
+function pickPoolDate(p) {
+  var t = todayKey(), opts = [];
+  for (var i = 0; i < 7; i++) {
+    var k = keyPlus(t, i);
+    opts.push({ v: k, t: whenLabel(k) + ' · ' + fmtDay(k), hint: k === p.date ? '当前' : '' });
+  }
+  choose('「' + p.title + '」顺延到哪天', opts, function (k) {
+    p.date = k;
+    saveData();
+    renderPool();
+    showSheet(poolSheet);
+    toast('暂定为 ' + whenLabel(k) + ' ' + fmt(p.slot) + '（仍是不确定）');
+    haptic();
   });
 }
 
@@ -1512,8 +1570,8 @@ function pickPoolSlot(p) {
 }
 
 function restoreFromPool(p) {
-  /* P3.50.5：直接落在池里定好的暂定时段，不再让用户重选一次 */
-  var tk = todayKey(), g = cfg().granularity, start0 = startOfKey(tk);
+  /* P3.50.6：落在池里定好的「哪天 + 几点」，不再让用户重选一次 */
+  var tk = p.date || todayKey(), g = cfg().granularity, start0 = startOfKey(tk);
   var slot = ((p.slot % 1440) + 1440) % 1440;
   var idx = Math.floor((((slot - start0) % 1440) + 1440) % 1440 / g);
   dayData(tk, true).items.push({
@@ -1528,12 +1586,12 @@ function restoreFromPool(p) {
   });
   data.pool = data.pool.filter(function (x) { return x.id !== p.id; });
   saveData();
-  view.date = shiftDateOf(new Date());
+  view.date = new Date(+tk.slice(0, 4), +tk.slice(5, 7) - 1, +tk.slice(8, 10));
   view.block = idx;
   render();
   renderSheet();
   showSheet(sheet);
-  toast('已放回 ' + fmt(slot) + ' · 时段可再改');
+  toast('已放回 ' + whenLabel(tk) + ' ' + fmt(slot) + ' · 可再改');
   haptic();
 }
 
