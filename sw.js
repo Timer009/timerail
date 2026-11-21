@@ -1,17 +1,17 @@
-/* 微记 · Service Worker（P3.50.3）
+/* 微记 · Service Worker（P3.50.4）
  * 策略：
  *   - 安装时预缓存应用外壳（HTML / CSS / JS / manifest / 图标），改版本号即换新缓存
  *   - 页面导航：网络优先，断网时回落到缓存的 index.html
  *   - 其它同源静态资源：缓存优先 + 后台顺手更新
  * 说明：Service Worker 只在 https 或 localhost 下生效；用局域网 IP 访问时自动跳过，应用照常可用。
  */
-var CACHE = 'timerail-p3.50.3';
+var CACHE = 'timerail-p3.50.4';
 var ASSETS = [
   './',
   './index.html',
-  './styles.css?v=p3.50.3',
-  './app.js?v=p3.50.3',
-  './manifest.webmanifest?v=p3.50.3',
+  './styles.css?v=p3.50.4',
+  './app.js?v=p3.50.4',
+  './manifest.webmanifest?v=p3.50.4',
   './icon-192.png',
   './icon-512.png',
   './icon-maskable-512.png',

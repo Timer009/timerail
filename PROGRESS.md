@@ -2451,6 +2451,36 @@ iOS 侧滑返回是系统级手势，WebKit 自带页面转场（当前页跟手
 - 选色不能直接写 `background: var(--violet-bg)` 到某个 `data-type` 上：标签和徽标是两套 DOM，最后统一收敛到 `data-tone` + `--tone-*`，只维护一份映射。
 - 自定义颜色必须跟**入库时的 emoji**，不能跟当前设置里的 emoji，否则改类型会让历史列表整片变色。
 
+---
+
+## P3.50.4 · 速记区防误触 ✅ 2026-11-21
+
+### 需求（用户原话）
+
+> 写日记的界面 速记的小标签 跟那个 管理按钮。太靠近了。容易误触。要不把 三个小标签。调小一点。往下移一点。把管理按钮 做大一点。
+
+### 改法（styles.css，只动记录页速记区）
+
+| 项 | 原值 | 新值 |
+|---|---|---|
+| `.diary-qhead` margin-bottom | 4px | 8px |
+| `#diary-manage` | 12px / padding 5px 10px（约 48×30） | 13px / 内联 flex / min-height 40px / padding 0 18px（64×40） |
+| `.diary-quick .log-type-row` padding | 2px 0 6px | 6px 0 8px |
+| `.diary-quick .log-tabs button` | 12px / padding 5px 13px（96×30） | 11px / padding 4px 10px（84×25） |
+
+管理按钮与标签的垂直净距：6px → **14px**；标签仍单行、无文字截断，P3.50.2 的铅笔角标不受影响（15px 圆底照常显示）。
+
+### 验收（390×844 iframe）
+
+- ✅ 管理 64×40，三个标签各 84×25、同 top=507
+- ✅ 管理 bottom=493、标签 top=507，净距 14px
+- ✅ 自定义选中后 `editable` 与角标正常，无遮挡文字
+
+### 备忘
+
+- 只按 `#diary-manage` 与 `.diary-quick` 作用域覆盖，不动 `.ghost.mini` 的通用尺寸（别处还在用）。
+
+
 
 
 
