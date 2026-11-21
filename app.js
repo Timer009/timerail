@@ -126,6 +126,11 @@
  *           点它可改时段；「放回」直接落在暂定时段，不再二次询问
  *   - P3.50.6：顺延池补「顺延到哪天」——入池默认原日期的第二天（今天是明天），
  *           池内左侧两行「明天 / 07:00 ?」分别可点改日期与时段，「放回」落在该日期
+ *   - P3.51：状态不再兼作完成开关——轨道圈只表达状态（空心 / 蓝环 / 绿底白勾 /
+ *           橙环 / 虚线圈），圈内只留「完成」的 ✓；点节点进详情，行内「状态」
+ *           标签五选一（未开始 / 进行中 / 已完成 / 未完成 / 已取消）；
+ *           时段可自定义：行内时段标签打开面板，开始 + 结束按 15 分钟一步，
+ *           结束早于开始按次日算；跨时段事项在竖向画贯穿胶囊条
  */
 (function () {
 'use strict';
@@ -135,7 +140,6 @@ var ROW_H  = { 30: 64, 60: 88, 120: 132 };   // 每种粒度的行高
 var NODE_D = { 30: 44, 60: 56, 120: 70 };    // 每种粒度的节点直径
 var TOP_PAD = 56;
 var BOTTOM_PAD = 56;
-var GLYPH = { done: '✓', doing: '▶', missed: '!', overdue: '!', canceled: '—', todo: '', empty: '' };
 
 /* ===== 小工具 ===== */
 function pad(n) { return (n < 10 ? '0' : '') + n; }
@@ -517,6 +521,17 @@ function itemBlock(it) { return Math.floor(offsetOf(it) / cfg().granularity); }
 function itemsInBlock(i) {
   return itemsOfDay().filter(function (it) { return itemBlock(it) === i; });
 }
+/* P3.51：某段时刻被哪些事项「覆盖」——自定义时长会跨越多个时段，
+ * 段线配色与进度按覆盖关系算，不再只看起点 */
+function itemsCovering(i) {
+  var g = cfg().granularity, a = i * g, b = a + g;
+  return itemsOfDay().filter(function (it) {
+    var s = offsetOf(it), d = Math.max(1, it.duration || 0);
+    if (s < b && s + d > a) return true;
+    if (s + d > 1440 && a < s + d - 1440) return true;   // 跨夜回到开头那段
+    return false;
+  });
+}
 function nowOffset() { return (((nowMin() - viewStart()) % 1440) + 1440) % 1440; }
 function isPastBlock(i) {
   var k = viewKey(), tk = todayKey();
@@ -577,6 +592,7 @@ var backdrop = document.getElementById('backdrop');
 var sheet = document.getElementById('sheet');
 var chooser = document.getElementById('chooser');
 var poolSheet = document.getElementById('pool-sheet');
+var whenSheet = document.getElementById('when-sheet');
 var settingsSheet = document.getElementById('settings');
 var addForm = document.getElementById('add-form');
 var addInput = document.getElementById('add-input');
@@ -720,13 +736,46 @@ function renderV() {
   // 路径：第 i 段代表第 i 个时段的流逝
   idx.forEach(function (i) {
     if (i >= B - 1) return;
-    var segList = itemsInBlock(i);
+    var segList = itemsCovering(i);
     var p = document.createElementNS('http://www.w3.org/2000/svg', 'path');
     p.setAttribute('d', pathD(pts, i, smooth));
     p.setAttribute('class', 'seg st-' + blockState(i, segList));
     svg.appendChild(p);
     addProgress(p, segList);   // 部分完成：按比例叠绿色，不整段变绿
   });
+
+  /* P3.51：自定义时长的事项画一条贯穿的胶囊条（起止按真实分钟），
+   * 让 3:00–6:00 这种跨时段的事在竖向也一眼看出占了多长 */
+  (function () {
+    function xyAtF(f) {
+      if (f <= 0) return pts[0];
+      if (f >= B - 1) {
+        var last = pts[B - 1], prev = pts[B - 2] || last;
+        var t2 = f - (B - 1);
+        return { x: last.x + (last.x - prev.x) * t2, y: last.y + (last.y - prev.y) * t2 };
+      }
+      var i0 = Math.floor(f), fr = f - i0, a = pts[i0], b2 = pts[i0 + 1];
+      return { x: a.x + (b2.x - a.x) * fr, y: a.y + (b2.y - a.y) * fr };
+    }
+    itemsOfDay().forEach(function (it) {
+      if (!(it.duration > g)) return;              // 只给跨时段的长事项画
+      var f0 = offsetOf(it) / g;
+      if (f0 >= B) return;                          // 起点落在本视图之后，不画
+      var f1 = Math.min(B - 0.001, f0 + it.duration / g);
+      if (f1 - f0 < 0.5) return;
+      var d = '', f, p;
+      for (f = f0; f < f1; f += 0.25) {
+        p = xyAtF(f);
+        d += (d ? 'L' : 'M') + p.x.toFixed(1) + ' ' + p.y.toFixed(1);
+      }
+      p = xyAtF(f1);
+      d += 'L' + p.x.toFixed(1) + ' ' + p.y.toFixed(1);
+      var sp = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+      sp.setAttribute('d', d);
+      sp.setAttribute('class', 'spanbar st-' + it.status);
+      svg.appendChild(sp);
+    });
+  })();
 
   var nowBlock = isToday() ? Math.floor(nowOffset() / g) : -1;
 
@@ -762,7 +811,9 @@ function renderV() {
       txt = doneN + '/' + list.length;
       nd.style.fontSize = Math.round(nodeD * 0.23) + 'px';
     } else if (list.length === 1) {
-      txt = GLYPH[st] || '';
+      /* P3.51：圈里只保留「完成」的对勾，其它状态靠圈的颜色/描边表达，
+       * 空圈回到空圈，不再被 ▶ ! — 占掉 */
+      txt = list[0].status === 'done' ? '✓' : '';
       nd.style.fontSize = Math.round(nodeD * 0.32) + 'px';
     } else {
       txt = (g === 30 && clock % 60 !== 0) ? '·' : '';
@@ -869,7 +920,7 @@ function renderH() {
   // 轴线：同样走自然样条/圆角折线
   var smooth = st === 'wave';
   for (i = 0; i < B - 1; i++) {
-    var segList = itemsInBlock(i);
+    var segList = itemsCovering(i);
     var p = document.createElementNS('http://www.w3.org/2000/svg', 'path');
     p.setAttribute('d', pathD(pts, i, smooth));
     p.setAttribute('class', 'seg st-' + blockState(i, segList));
@@ -894,7 +945,8 @@ function renderH() {
       txt = dn + '/' + list.length;
       nd.style.fontSize = Math.round(nodeD * 0.23) + 'px';
     } else if (list.length === 1) {
-      txt = GLYPH[s] || '';
+      /* P3.51：横向节点同样只保留完成对勾，状态交给圈色 */
+      txt = list[0].status === 'done' ? '✓' : '';
       nd.style.fontSize = Math.round(nodeD * 0.32) + 'px';
     }
     nd.textContent = txt;
@@ -1133,6 +1185,8 @@ function backOne() {
   if (activeSheet === chooser && chooserBack) {
     var cb = chooserBack; chooserBack = null; restoreSheet(cb); navPush(); return true;
   }
+  /* 时段面板（P3.51）浮在详情之上：返回先退回详情，别把两层一起关掉 */
+  if (activeSheet === whenSheet) { hideSheet(); showSheet(sheet); return true; }
   if (activeSheet) { hideSheet(); return true; }
   if (dayOpen) { closeDay(); return true; }   // P3.49：单日阅读页在全部记录之上，先关它
   if (allOpen) { closeAll(); return true; }
@@ -1225,7 +1279,7 @@ function renderSheet() {
   document.getElementById('sheet-title').textContent =
     fmt(s) + ' – ' + fmt(e) + (e <= s ? ' 次日' : '');
   document.getElementById('sheet-sub').textContent =
-    list.length ? list.length + ' 项 · 点圆圈打钩 · 点名称改名' : '这个时段还空着';
+    list.length ? list.length + ' 项 · 点状态改状态 · 点名称改名' : '这个时段还空着';
 
   var ul = document.getElementById('sheet-list');
   ul.innerHTML = '';
@@ -1233,29 +1287,121 @@ function renderSheet() {
     ul.appendChild(el('li', 'empty-row', '在下面输入框里加第一件事'));
   }
   list.forEach(function (it) {
-    var li = el('li', 'row');
-    var chkState = (it.status === 'todo' && isPastBlock(i)) ? 'overdue' : it.status;
-    var chk = el('button', 'check st-' + chkState, GLYPH[it.status] || '');
-    chk.type = 'button';
-    chk.setAttribute('aria-label', '切换完成');
-    chk.addEventListener('click', function () { toggleDone(it); });
+    var li = el('li', 'row item-row');
+    /* P3.51：状态与时段分开成两个明确入口，不再用「显示状态的圈」当完成开关 */
+    var stName = STATUS_NAME[it.status] || '未开始';
+    var stBtn = el('button', 'status-chip st-' + it.status, stName);
+    stBtn.type = 'button';
+    stBtn.setAttribute('aria-label', '状态：' + stName + '，点按修改');
+    stBtn.addEventListener('click', function () { statusMenu(it); });
 
+    var body = el('div', 'item-body');
     var t = el('div', 'rowtitle' + (it.status === 'canceled' ? ' struck' : ''), it.title);
     t.setAttribute('role', 'button');
     t.tabIndex = 0;
     t.setAttribute('aria-label', '重命名「' + it.title + '」');
     t.addEventListener('click', function () { startRename(it, t); });
 
+    var endMin = (it.start + it.duration) % 1440;
+    var scope = fmt(it.start) + '–' + fmt(endMin) + (it.start + it.duration > 1440 ? ' 次日' : '');
+    var when = el('button', 'when-chip', scope + ' · ' + durText(it.duration));
+    when.type = 'button';
+    when.setAttribute('aria-label', '时段 ' + scope + '，点按修改');
+    when.addEventListener('click', function () { openWhen(it); });
+
+    body.appendChild(t);
+    body.appendChild(when);
+
     var more = el('button', 'icon', '⋯');
     more.type = 'button';
     more.setAttribute('aria-label', '更多操作');
     more.addEventListener('click', function () { itemMenu(it); });
 
-    li.appendChild(chk);
-    li.appendChild(t);
+    li.appendChild(stBtn);
+    li.appendChild(body);
     li.appendChild(more);
     ul.appendChild(li);
   });
+}
+
+/* ===== 状态与时段（P3.51）=====
+ * 状态：五个明确选项，从状态标签进入，不再有「显示态兼开关」的圈。
+ * 时段：15 分钟一步，开始 + 结束两个原生时间输入，结束早于开始按次日算。 */
+var STATUS_NAME = { todo: '未开始', doing: '进行中', done: '已完成', missed: '未完成', canceled: '已取消' };
+var STATUS_ORDER = ['todo', 'doing', 'done', 'missed', 'canceled'];
+
+function durText(min) {
+  min = Math.max(0, Math.round(min));
+  var h = Math.floor(min / 60), m = min % 60;
+  if (!h) return m + ' 分钟';
+  return m ? h + ' 小时 ' + m + ' 分' : h + ' 小时';
+}
+
+function statusMenu(it) {
+  var opts = STATUS_ORDER.map(function (s) {
+    return { v: s, t: STATUS_NAME[s], hint: it.status === s ? '当前' : '' };
+  });
+  choose('「' + it.title + '」的状态', opts, function (s) {
+    if (s !== it.status) {
+      it.status = s;
+      it.updatedAt = iso();
+      saveData();
+      haptic();
+    }
+    renderSheet();
+    render();
+    showSheet(sheet);
+  });
+}
+
+var whenItem = null;
+function clockVal(min) {
+  min = ((Math.round(min) % 1440) + 1440) % 1440;
+  return pad(Math.floor(min / 60)) + ':' + pad(min % 60);
+}
+function openWhen(it) {
+  whenItem = it;
+  document.getElementById('when-title').textContent = '「' + it.title + '」的时段';
+  document.getElementById('when-start').value = clockVal(it.start);
+  document.getElementById('when-end').value = clockVal(it.start + it.duration);
+  showSheet(whenSheet);
+}
+document.getElementById('when-close').addEventListener('click', function () {
+  hideSheet();
+  showSheet(sheet);
+});
+document.getElementById('when-cancel').addEventListener('click', function () {
+  hideSheet();
+  showSheet(sheet);
+});
+document.getElementById('when-save').addEventListener('click', function () {
+  if (!whenItem) { hideSheet(); return; }
+  var fallbackE = (whenItem.start + whenItem.duration) % 1440;
+  var s = snap15(document.getElementById('when-start').value, whenItem.start);
+  var e = snap15(document.getElementById('when-end').value, fallbackE);
+  if (s == null || e == null) { toast('时间格式不对'); return; }
+  var d = e - s;
+  if (d <= 0) d += 1440;
+  if (d < 15) d = 15;
+  whenItem.start = s;
+  whenItem.duration = d;
+  whenItem.updatedAt = iso();
+  saveData();
+  render();
+  /* 起点改到别的时段后，详情面板跟着事项走，否则刚改完它就从这个面板里"消失"了 */
+  view.block = itemBlock(whenItem);
+  renderSheet();
+  hideSheet();
+  showSheet(sheet);
+  toast('时段改为 ' + fmt(s) + '–' + fmt((s + d) % 1440) + ' · ' + durText(d));
+  haptic();
+});
+function snap15(v, fallback) {
+  var m = /^(\d{1,2}):(\d{2})$/.exec(v || '');
+  if (!m) return fallback == null ? null : fallback;
+  var t = (+m[1]) * 60 + (+m[2]);
+  if (t < 0 || t >= 1440) return fallback == null ? null : fallback;
+  return (Math.round(t / 15) * 15) % 1440;
 }
 
 /* 行内改名：点事项名称 → 原位变输入框，Enter/失焦保存，Esc 取消 */
@@ -1303,15 +1449,6 @@ function startRename(it, titleEl) {
       cancel();
     }
   });
-}
-
-function toggleDone(it) {
-  it.status = it.status === 'done' ? 'todo' : 'done';
-  it.updatedAt = iso();
-  saveData();
-  renderSheet();
-  render();
-  haptic();
 }
 
 /* 通用选择器 */

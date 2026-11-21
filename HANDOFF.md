@@ -191,3 +191,13 @@ timerail/
 - 「进阶 · 多套日程」整块界面（折叠卡片、模板列表、新建模板、按天自动套用、添加一天、启用、从哪天开始）已在 P3.31 删除，相关 JS / CSS 一并清掉，**不要再加回来**。
 - `data.shifts`、`data.rotation` 两个字段仍保留在 normalize 与备份里，只为了读得进旧数据；`rotation.active` 一律强制为 `false`，它们不再影响任何视图。
 - 起点就是设置里手选的「一天从几点开始」，没有第二种来源。
+
+## 九、P3.51 约定：状态与时段（2026-11-21）
+
+- **圈只管显示，不再兼作完成开关**。节点圈内只出现「已完成」的 ✓（一个时段多项时仍显示 `done/total`）；进行中 / 未完成 / 已取消只用圈的颜色与描边区分（蓝环 / 橙环 / 虚线圈）。任何「点圈直接打钩」的写法都不要再加回来。
+- 改状态唯一入口：详情面板行首的 `.status-chip` → `statusMenu()` 五选一（`todo / doing / done / missed / canceled`）。状态名统一走 `STATUS_NAME`，不要另写别名。
+- 改时段唯一入口：详情面板的 `.when-chip` → `#when-sheet`（`openWhen`）。两个原生 `type=time`（`step=900`），`snap15()` 取整到 15 分钟；结束早于开始按次日算（`d += 1440`），最短 15 分钟。
+- 保存时段后必须同时 `view.block = itemBlock(whenItem)`，否则事项换了时段就从当前面板里消失。
+- 跨时段可见性：竖向由 `.spanbar` 沿轨道采样绘制（只画 `duration > granularity` 的事项）；段线配色与完成比例用 `itemsCovering(i)`，不要退回 `itemBlock` 只看起点。
+- `backOne()` 里 `whenSheet` 必须排在通用 `activeSheet` 之前：先退回详情面板，避免系统返回把两层一起关。
+- 版本串三处同步：`index.html` 的 `?v=` ×3 + 设置页注记、`sw.js` 的 `CACHE` 与 `ASSETS`。

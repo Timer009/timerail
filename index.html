@@ -27,10 +27,10 @@
   if (m) m.setAttribute('content', light ? '#f5f8fc' : '#0e131f');
 })();
 </script>
-<link rel="manifest" href="manifest.webmanifest?v=p3.50.6">
+<link rel="manifest" href="manifest.webmanifest?v=p3.51">
 <link rel="icon" type="image/png" sizes="192x192" href="icon-192.png">
 <link rel="apple-touch-icon" href="apple-touch-icon.png">
-<link rel="stylesheet" href="styles.css?v=p3.50.6">
+<link rel="stylesheet" href="styles.css?v=p3.51">
 </head>
 <body>
 
@@ -233,6 +233,25 @@
   </form>
 </section>
 
+<!-- 自定义时段（P3.51）：15 分钟一步，可跨时段、可跨夜 -->
+<section class="sheet" id="when-sheet" aria-hidden="true">
+  <div class="sheet-head">
+    <div>
+      <div class="sheet-title" id="when-title">时段</div>
+      <div class="sub">15 分钟为一步，结束早于开始按次日算</div>
+    </div>
+    <button class="icon" id="when-close" aria-label="关闭">✕</button>
+  </div>
+  <div class="when-body">
+    <label class="when-row"><span>开始</span><input type="time" id="when-start" step="900"></label>
+    <label class="when-row"><span>结束</span><input type="time" id="when-end" step="900"></label>
+  </div>
+  <div class="when-actions">
+    <button type="button" class="ghost" id="when-cancel">取消</button>
+    <button type="button" class="primary" id="when-save">保存</button>
+  </div>
+</section>
+
 <!-- 通用选择器：状态 / 移动目标 / 确认框 -->
 <section class="sheet" id="chooser" aria-hidden="true">
   <div class="sheet-head">
@@ -379,7 +398,7 @@
       <button type="button" class="ghost danger" id="reset">清空全部数据</button>
     </div>
 
-    <div class="note">数据仅保存在本机浏览器中 · 版本 P3.50.6 (2026-11-21)</div>
+    <div class="note">数据仅保存在本机浏览器中 · 版本 P3.51 (2026-11-21)</div>
   </div>
 </section>
 
@@ -401,6 +420,6 @@
 </div>
 
 <div id="toast"></div>
-<script src="app.js?v=p3.50.6"></script>
+<script src="app.js?v=p3.51"></script>
 </body>
 </html>
