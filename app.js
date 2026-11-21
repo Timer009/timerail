@@ -136,6 +136,9 @@
  *   - P3.51.2：修返回——状态标签 / 「⋯」/ 顺延池的选择器打开后，系统返回先切回原
  *           面板（choose 增加 backSheet），不再直接掉回主页；行内时段改成带边框
  *           的按钮，右侧明写「改时段」
+ *   - P3.51.3：点 ✕ / 遮罩关上层时同样切回下层——新增 dismissSheet()，
+ *           确认框 / 状态选择器 / ⋯ 菜单 / 时段面板都用它；时段面板的关闭与
+ *           系统返回改为 restoreSheet，不再 hideSheet + showSheet
  */
 (function () {
 'use strict';
@@ -1191,7 +1194,7 @@ function backOne() {
     var cb = chooserBack; chooserBack = null; restoreSheet(cb); navPush(); return true;
   }
   /* 时段面板（P3.51）浮在详情之上：返回先退回详情，别把两层一起关掉 */
-  if (activeSheet === whenSheet) { hideSheet(); showSheet(sheet); return true; }
+  if (activeSheet === whenSheet) { restoreSheet(sheet); navPush(); return true; }
   if (activeSheet) { hideSheet(); return true; }
   if (dayOpen) { closeDay(); return true; }   // P3.49：单日阅读页在全部记录之上，先关它
   if (allOpen) { closeAll(); return true; }
@@ -1267,6 +1270,16 @@ function restoreSheet(s) {
   s.classList.add('open');
   s.setAttribute('aria-hidden', 'false');
   backdrop.classList.add('open');
+}
+/* 关闭最上层面板：
+ * 确认框 / 选择器 / 时段面板都是从下层面板拉起的，共用同一条 history 条目。
+ * 点 ✕ 或点遮罩时只切回下层，不能 hideSheet()——否则会把下层一起关掉、直接掉回主页（P3.51.3） */
+function dismissSheet() {
+  if (activeSheet === chooser && chooserBack) {
+    var cb = chooserBack; chooserBack = null; restoreSheet(cb); return;
+  }
+  if (activeSheet === whenSheet) { restoreSheet(sheet); return; }
+  hideSheet();
 }
 
 function openBlock(i) {
@@ -1374,14 +1387,8 @@ function openWhen(it) {
   document.getElementById('when-end').value = clockVal(it.start + it.duration);
   showSheet(whenSheet);
 }
-document.getElementById('when-close').addEventListener('click', function () {
-  hideSheet();
-  showSheet(sheet);
-});
-document.getElementById('when-cancel').addEventListener('click', function () {
-  hideSheet();
-  showSheet(sheet);
-});
+document.getElementById('when-close').addEventListener('click', dismissSheet);
+document.getElementById('when-cancel').addEventListener('click', dismissSheet);
 document.getElementById('when-save').addEventListener('click', function () {
   if (!whenItem) { hideSheet(); return; }
   var fallbackE = (whenItem.start + whenItem.duration) % 1440;
@@ -2753,7 +2760,7 @@ document.getElementById('go-now').addEventListener('click', function () {
 });
 document.getElementById('gear').addEventListener('click', function () { renderSettings(); showSheet(settingsSheet); });
 document.getElementById('sheet-close').addEventListener('click', hideSheet);
-document.getElementById('chooser-close').addEventListener('click', hideSheet);
+document.getElementById('chooser-close').addEventListener('click', dismissSheet);
 document.getElementById('set-close').addEventListener('click', hideSheet);
 document.getElementById('pool-close').addEventListener('click', hideSheet);
 document.getElementById('pool-link').addEventListener('click', function () {
@@ -2762,7 +2769,7 @@ document.getElementById('pool-link').addEventListener('click', function () {
 });
 document.getElementById('log-link').addEventListener('click', openDiary);
 document.getElementById('log-close').addEventListener('click', hideSheet);
-backdrop.addEventListener('click', hideSheet);
+backdrop.addEventListener('click', dismissSheet);
 document.addEventListener('keydown', function (e) {
   /* Esc 与安卓侧边返回共用 backOne（P3.46）：逐层关，与系统返回手势行为一致 */
   if (e.key === 'Escape') backOne();
