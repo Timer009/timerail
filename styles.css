@@ -812,6 +812,7 @@ body.horiz .hint {
 .log-type-row .log-tabs { flex: 1; flex-wrap: wrap; padding-bottom: 0; }
 .log-tabs { display: flex; gap: 7px; padding-bottom: 10px; }
 .log-tabs button {
+  position: relative;
   padding: 5px 13px;
   border-radius: 99px;
   border: 1px solid var(--line);
@@ -834,6 +835,31 @@ body.horiz .hint {
 .log-badge.custom { color: var(--amber-ink); border-color: var(--amber-line); background: var(--amber-bg); }
 .log-tabs button.active[data-type="custom"] { border-color: var(--amber-line); background: var(--amber-bg); color: var(--amber-ink); }
 .log-tabs button[data-type="custom-new"] { color: var(--now-ink); border-style: dashed; }
+/* 自定义类型被选中时（P3.50.2）：右上角挂一枚小铅笔角标，
+ * 告诉用户「这个标签还能再改名 / 换图标」，点它就是打开修改弹窗。
+ * 角标绝对定位在描边外，不占文字宽度，三个标签并排时不会把文案挤成省略号。 */
+.log-tabs button.editable::before {
+  content: "";
+  position: absolute;
+  top: -4px;
+  right: -4px;
+  width: 15px;
+  height: 15px;
+  border-radius: 50%;
+  background: var(--amber-bg);
+  border: 1px solid var(--amber-line);
+}
+.log-tabs button.editable::after {
+  content: "";
+  position: absolute;
+  top: -2px;
+  right: -2px;
+  width: 11px;
+  height: 11px;
+  background-color: var(--amber-ink);
+  -webkit-mask: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'><path fill='black' d='M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04a1 1 0 0 0 0-1.41l-2.34-2.34a1 1 0 0 0-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z'/></svg>") center / 9px 9px no-repeat;
+  mask: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'><path fill='black' d='M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04a1 1 0 0 0 0-1.41l-2.34-2.34a1 1 0 0 0-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z'/></svg>") center / 9px 9px no-repeat;
+}
 .log-body { flex: 1; min-width: 0; }
 .log-text { font-size: 13px; line-height: 1.45; word-break: break-word; white-space: pre-wrap; }
 .log-time { font-size: 11px; color: var(--muted-2); margin-top: 2px; font-variant-numeric: tabular-nums; }

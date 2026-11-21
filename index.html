@@ -27,10 +27,10 @@
   if (m) m.setAttribute('content', light ? '#f5f8fc' : '#0e131f');
 })();
 </script>
-<link rel="manifest" href="manifest.webmanifest?v=p3.50.1">
+<link rel="manifest" href="manifest.webmanifest?v=p3.50.2">
 <link rel="icon" type="image/png" sizes="192x192" href="icon-192.png">
 <link rel="apple-touch-icon" href="apple-touch-icon.png">
-<link rel="stylesheet" href="styles.css?v=p3.50.1">
+<link rel="stylesheet" href="styles.css?v=p3.50.2">
 </head>
 <body>
 
@@ -280,7 +280,7 @@
 <div class="modal" id="logtype" hidden>
   <div class="modal-card" role="dialog" aria-modal="true" aria-labelledby="logtype-title">
     <div class="modal-title" id="logtype-title">新建小记类型</div>
-    <div class="field-hint">起个短名字，配一个表情；只作分类，不影响已有小记。</div>
+    <div class="field-hint" id="logtype-hint">起个短名字，配一个表情；只作分类，不影响已有小记。</div>
     <input id="logtype-name" type="text" maxlength="4" placeholder="如：闪光时刻" autocomplete="off">
     <div class="emoji-row" id="logtype-emojis"></div>
     <div class="modal-actions">
@@ -379,7 +379,7 @@
       <button type="button" class="ghost danger" id="reset">清空全部数据</button>
     </div>
 
-    <div class="note">数据仅保存在本机浏览器中 · 版本 P3.50.1 (2026-11-21)</div>
+    <div class="note">数据仅保存在本机浏览器中 · 版本 P3.50.2 (2026-11-21)</div>
   </div>
 </section>
 
@@ -401,6 +401,6 @@
 </div>
 
 <div id="toast"></div>
-<script src="app.js?v=p3.50.1"></script>
+<script src="app.js?v=p3.50.2"></script>
 </body>
 </html>

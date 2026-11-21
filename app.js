@@ -114,6 +114,8 @@
  *   - P3.50：轨道风格重排——删掉与蛇形重复的「大弧」（旧数据 arc → wave）
  *   - P3.50.1：矩形 / 圆形两种闭环下线（观感不佳），风格回到蛇形 / 直线 / 折线
  *           三种；旧存档里的 rect / circle 与 arc 一样折回蛇形
+ *   - P3.50.2：自定义小记类型被选中时，标签右上角露出铅笔角标，点它即可改名/换图标
+ *           （原先入口藏在「再点一次」，没人知道还能改）；修改弹窗提示只影响之后记的条目
  */
 (function () {
 'use strict';
@@ -1548,7 +1550,14 @@ function renderLogTabs() {
     b.type = 'button';
     b.dataset.type = t;
     b.textContent = label;
-    if (t === logType) b.className = 'active';
+    if (t === logType) {
+      b.className = 'active';
+      /* P3.50.2：自定义标签选中后右上角露出铅笔角标，提示「点它可改名换图标」 */
+      if (t === 'custom') {
+        b.classList.add('editable');
+        b.setAttribute('aria-label', label + '，点按可修改');
+      }
+    }
     logTabs.appendChild(b);
   }
   add('highlight', '💡 灵光一闪');
@@ -1714,6 +1723,10 @@ function openLogTypeDialog(editing) {
   logTypeEditing = !!editing;
   var c = data.settings.logCustom;
   logTypeTitle.textContent = logTypeEditing ? '修改小记类型' : '新建小记类型';
+  /* P3.50.2：编辑时说清影响范围——已有小记的图标/名字是定格的（P3.9.1） */
+  document.getElementById('logtype-hint').textContent = logTypeEditing
+    ? '改名或换图标只影响之后记的条目，已有小记保持原样。'
+    : '起个短名字，配一个表情；只作分类，不影响已有小记。';
   /* 新建时：默认图标 ✨，名称跟着推荐名走，不再是「随记」 */
   logTypeName.value = c ? c.name : LOG_NAMES['✨'];
   logTypeEmoji = c ? c.emoji : '✨';
