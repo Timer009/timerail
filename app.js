@@ -121,6 +121,9 @@
  *           表情走，历史条目不随改名变色；标签未选中仍为灰
  *   - P3.50.4：记录页速记区防误触——「管理」加大到 36px 高，类型标签收小并下移，
  *           两者间距从 6px 拉到 14px 以上
+ *   - P3.50.5：顺延池重做——入口从 11px 下划线文字升级成橙色胶囊；入池时按原事项
+ *           时段记一个暂定 slot，池内以大号「07:00 ?」虚线块显示（? = 还没定），
+ *           点它可改时段；「放回」直接落在暂定时段，不再二次询问
  */
 (function () {
 'use strict';
@@ -248,10 +251,14 @@ function normItem(it) {
 function normPool(p) {
   if (!p || typeof p !== 'object') return null;
   var title = typeof p.title === 'string' ? p.title.trim() : '';
+  /* P3.50.5：入池时记下原时段（不确定状态）；老数据没有就落到 09:00 */
+  var slot = Math.round(+p.slot);
+  if (!isFinite(slot) || slot < 0 || slot > 1439) slot = 540;
   return {
     id: typeof p.id === 'string' && p.id ? p.id : 'pool_' + uid(),
     title: title ? title.slice(0, 40) : '未命名',
     fromDate: /^\d{4}-\d{2}-\d{2}$/.test(p.fromDate) ? p.fromDate : '',
+    slot: slot,
     carriedTimes: Math.max(1, Math.round(+p.carriedTimes) || 1)
   };
 }
@@ -1441,11 +1448,11 @@ function putIntoPool(it) {
     showSheet(sheet);
     return;
   }
-  data.pool.push({ id: pid, title: it.title, fromDate: key, carriedTimes: 1 });
+  data.pool.push({ id: pid, title: it.title, fromDate: key, slot: it.start, carriedTimes: 1 });
   saveData();
   updateHeader();
   showSheet(sheet);
-  toast('已放入顺延池 · 原日记录不变');
+  toast('已放入顺延池 · 暂按 ' + fmt(it.start) + ' 记，点时间可改');
   haptic();
 }
 
@@ -1454,7 +1461,7 @@ function renderPool() {
   ul.innerHTML = '';
   var list = data.pool;
   document.getElementById('pool-sub').textContent = list.length
-    ? list.length + ' 项等着安排 · 放回后原日记录仍保留'
+    ? list.length + ' 项还没定下来 · 时间旁的「?」表示暂定，点时间可改'
     : '在事项「⋯」里可手动放入顺延池';
   if (!list.length) {
     ul.appendChild(el('li', 'empty-row', '池子空着'));
@@ -1462,17 +1469,24 @@ function renderPool() {
   }
   list.forEach(function (p) {
     var li = el('li', 'row pool-row');
+    /* P3.50.5：暂定时段做成大号可点按钮，虚线框 + 问号表示「还没定」 */
+    var when = el('button', 'pool-slot', fmt(p.slot));
+    when.type = 'button';
+    when.setAttribute('aria-label', '暂定 ' + fmt(p.slot) + '，点按可改时段');
+    when.appendChild(el('span', 'q', '?'));
+    when.addEventListener('click', function () { pickPoolSlot(p); });
     var info = el('div', 'poolinfo');
     info.appendChild(el('div', 'rowtitle', p.title));
     info.appendChild(el('div', 'poolmeta',
       '来自 ' + fmtDay(p.fromDate) + (p.carriedTimes > 1 ? ' · 第 ' + p.carriedTimes + ' 次顺延' : '')));
-    var back = el('button', 'ghost mini', '放回');
+    var back = el('button', 'ghost pool-back', '放回');
     back.type = 'button';
     back.addEventListener('click', function () { restoreFromPool(p); });
     var del = el('button', 'icon mini', '✕');
     del.type = 'button';
     del.setAttribute('aria-label', '移出顺延池');
     del.addEventListener('click', function () { dropFromPool(p); });
+    li.appendChild(when);
     li.appendChild(info);
     li.appendChild(back);
     li.appendChild(del);
@@ -1480,33 +1494,47 @@ function renderPool() {
   });
 }
 
-function restoreFromPool(p) {
-  var tk = todayKey(), g = cfg().granularity, B = blocks(), start0 = startOfKey(tk), opts = [];
+/* 改暂定时段：列表与「放回」共用同一套时间块 */
+function pickPoolSlot(p) {
+  var g = cfg().granularity, B = blocks(), start0 = startOfKey(viewKey()), opts = [];
   for (var i = 0; i < B; i++) {
     var s0 = (start0 + i * g) % 1440;
-    opts.push({ v: i, t: fmt(s0) + ' – ' + fmt((s0 + g) % 1440) });
+    opts.push({ v: s0, t: fmt(s0) + ' – ' + fmt((s0 + g) % 1440), hint: s0 === p.slot ? '当前' : '' });
   }
-  choose('「' + p.title + '」放回今天哪个时段', opts, function (i) {
-    dayData(tk, true).items.push({
-      id: uid(),
-      title: p.title,
-      start: (start0 + i * g) % 1440,
-      duration: g,
-      status: 'todo',
-      note: '',
-      createdAt: iso(),
-      updatedAt: iso()
-    });
-    data.pool = data.pool.filter(function (x) { return x.id !== p.id; });
+  choose('「' + p.title + '」暂定几点', opts, function (s) {
+    p.slot = s;
     saveData();
-    view.date = shiftDateOf(new Date());
-    view.block = i;
-    render();
-    renderSheet();
-    showSheet(sheet);
-    toast('已放回 ' + fmt((start0 + i * g) % 1440));
+    renderPool();
+    showSheet(poolSheet);
+    toast('暂定为 ' + fmt(s) + '（仍是不确定时段）');
     haptic();
   });
+}
+
+function restoreFromPool(p) {
+  /* P3.50.5：直接落在池里定好的暂定时段，不再让用户重选一次 */
+  var tk = todayKey(), g = cfg().granularity, start0 = startOfKey(tk);
+  var slot = ((p.slot % 1440) + 1440) % 1440;
+  var idx = Math.floor((((slot - start0) % 1440) + 1440) % 1440 / g);
+  dayData(tk, true).items.push({
+    id: uid(),
+    title: p.title,
+    start: slot,
+    duration: g,
+    status: 'todo',
+    note: '',
+    createdAt: iso(),
+    updatedAt: iso()
+  });
+  data.pool = data.pool.filter(function (x) { return x.id !== p.id; });
+  saveData();
+  view.date = shiftDateOf(new Date());
+  view.block = idx;
+  render();
+  renderSheet();
+  showSheet(sheet);
+  toast('已放回 ' + fmt(slot) + ' · 时段可再改');
+  haptic();
 }
 
 function dropFromPool(p) {

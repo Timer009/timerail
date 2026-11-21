@@ -652,13 +652,21 @@ body.horiz .hint {
   padding: 0 2px 7px;
   font-variant-numeric: tabular-nums;
 }
+/* P3.50.5：顺延池入口从 11px 下划线文字升级成橙色胶囊，池里有东西时一眼能看到 */
 .pool-link {
-  font-size: 11px;
+  display: inline-flex;
+  align-items: center;
+  height: 28px;
+  padding: 0 12px;
+  border-radius: 999px;
+  border: 1px solid var(--orange-line);
+  background: var(--orange-bg);
   color: var(--orange-ink);
-  padding: 0;
-  text-decoration: underline;
-  text-underline-offset: 3px;
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: .2px;
 }
+.pool-link:active { background: var(--amber-bg); }
 .pool-link[hidden] { display: none; }
 .linkwrap { display: flex; align-items: center; gap: 10px; margin-left: auto; }
 .log-link {
@@ -772,10 +780,30 @@ body.horiz .hint {
 .empty-row { padding: 22px 0; text-align: center; color: var(--muted); font-size: 13px; }
 
 /* ===== 顺延池 ===== */
-.pool-row { gap: 8px; }
+/* 顺延池行（P3.50.5）：左侧大号「暂定时间 ?」，虚线框表示还没定；点它改时段 */
+.pool-row { gap: 10px; align-items: center; padding: 12px 0; }
 .pool-row .poolinfo { flex: 1; min-width: 0; }
-.pool-row .rowtitle { cursor: default; }
-.poolmeta { font-size: 11px; color: var(--muted); margin-top: 2px; }
+.pool-row .rowtitle { cursor: default; font-size: 14px; }
+.poolmeta { font-size: 11px; color: var(--muted); margin-top: 3px; }
+.pool-slot {
+  flex: none;
+  min-width: 66px;
+  padding: 7px 8px;
+  border-radius: 10px;
+  border: 1px dashed var(--orange-line);
+  background: var(--orange-bg-soft);
+  color: var(--orange-ink);
+  font-size: 15px;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+}
+.pool-slot .q { font-size: 12px; font-weight: 700; opacity: .85; }
+.pool-slot:active { background: var(--orange-bg); }
+.pool-back { padding: 7px 12px; font-size: 13px; border-radius: 10px; }
 .ghost.mini { padding: 5px 10px; border-radius: 8px; font-size: 12px; flex: none; }
 .icon.mini { width: 30px; height: 30px; font-size: 14px; border-radius: 8px; }
 
